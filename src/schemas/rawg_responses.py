@@ -1,4 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from src.developers.models import DeveloperCreate
+from src.publisher.models import PublisherCreate
 
 
 class GameSearchRawgResponse(BaseModel):
@@ -16,3 +19,5 @@ class GameDetailRawgResponse(BaseModel):
     release_date: str | None = None
     image_url: str | None = None
     screenshots: list[str] = []
+    developers: list[DeveloperCreate] = Field(default_factory=list)
+    publishers: list[PublisherCreate] = Field(default_factory=list)

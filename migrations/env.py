@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 from src.core.settings import settings
+from src.developers.models import Developer  # noqa: F401
+from src.games.models import Game  # noqa: F401
+from src.publisher.models import Publisher  # noqa: F401
 from src.users.models import User  # noqa: F401 - Register User table metadata with SQLModel
 
 # this is the Alembic Config object, which provides

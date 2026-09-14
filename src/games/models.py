@@ -1,8 +1,16 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ARRAY, Column, String
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+from src.developers.models import GameDeveloperLink
+from src.publisher.models import GamePublisherLink
+
+if TYPE_CHECKING:
+    from src.developers.models import Developer
+    from src.publisher.models import Publisher
 
 
 class GameBase(SQLModel):
@@ -19,6 +27,13 @@ class GameBase(SQLModel):
 
 class Game(GameBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+    developers: list["Developer"] = Relationship(  # noqa: UP037
+        back_populates="games", link_model=GameDeveloperLink
+    )
+    publishers: list["Publisher"] = Relationship(  # noqa: UP037
+        back_populates="games", link_model=GamePublisherLink
+    )
 
 
 class GameCreate(GameBase):

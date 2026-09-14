@@ -4,6 +4,8 @@ from typing import Any
 import httpx
 
 from src.core.settings import settings
+from src.developers.models import DeveloperCreate
+from src.publisher.models import PublisherCreate
 from src.schemas.rawg_responses import GameDetailRawgResponse, GameSearchRawgResponse
 
 logger = logging.getLogger("rawg_service")
@@ -84,10 +86,26 @@ class RawgService:
             rawg_id=game_json["id"],
             title=game_json.get("name") or game_json.get("title", ""),
             slug=game_json.get("slug", game_slug),
-            description=game_json.get("description", ""),
+            description=game_json.get("description_raw", ""),
             release_date=game_json.get("released"),
             image_url=game_json.get("background_image"),
             screenshots=screenshots,
+            developers=[
+                DeveloperCreate(
+                    rawg_id=developer.get("id"),
+                    name=developer.get("name"),
+                    slug=developer.get("slug"),
+                )
+                for developer in game_json.get("developers", [])
+            ],
+            publishers=[
+                PublisherCreate(
+                    rawg_id=pub.get("id"),
+                    name=pub.get("name"),
+                    slug=pub.get("slug"),
+                )
+                for pub in game_json.get("publishers", [])
+            ],
         )
 
     async def get_game_screenshots(self, game_slug: str) -> list[str]:

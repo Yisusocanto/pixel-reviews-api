@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 
-def get_current_date():
-    tz = timezone(timedelta(hours=-4))
-    return datetime.now(tz=tz).replace(tzinfo=None)
+def get_current_date() -> datetime:
+    """Returns the current timestamp in UTC timezone."""
+    return datetime.now(UTC)

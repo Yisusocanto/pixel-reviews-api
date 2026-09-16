@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlmodel import Field, SQLModel
 
-from src.lib.dates import get_current_date
+from src.core.mixins import TimestampMixin
 
 
 class UserBase(SQLModel):
@@ -12,13 +12,11 @@ class UserBase(SQLModel):
     bio: str | None = Field(default=None)
 
 
-class User(UserBase, table=True):
+class User(UserBase, TimestampMixin, table=True):
     __tablename__ = "users"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str = Field(nullable=False)
-    created_at: datetime = Field(default_factory=get_current_date)
-    updated_at: datetime = Field(default_factory=get_current_date)
 
 
 class UserCreate(UserBase):

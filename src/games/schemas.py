@@ -11,6 +11,6 @@ class GameResponse(GameBase):
     developers: list[Developer]
     publishers: list[Publisher]
 
+
 class GamePagination(Pagination):
     items: list[GameResponse]
-

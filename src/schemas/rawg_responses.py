@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
-from src.developers.models import DeveloperCreate
-from src.publisher.models import PublisherCreate
+from src.modules.developers.models import DeveloperCreate
+from src.modules.publisher.models import PublisherCreate
 
 
 class GameSearchRawgResponse(BaseModel):

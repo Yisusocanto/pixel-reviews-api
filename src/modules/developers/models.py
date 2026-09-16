@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from src.games.models import Game
+    from src.modules.games.models import Game
 
 
 class GameDeveloperLink(SQLModel, table=True):

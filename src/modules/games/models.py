@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ARRAY, Column, String
 from sqlmodel import Field, Relationship, SQLModel
 
-from src.developers.models import GameDeveloperLink
-from src.publisher.models import GamePublisherLink
+from src.modules.developers.models import GameDeveloperLink
+from src.modules.publisher.models import GamePublisherLink
 
 if TYPE_CHECKING:
-    from src.developers.models import Developer
-    from src.publisher.models import Publisher
+    from src.modules.developers.models import Developer
+    from src.modules.publisher.models import Publisher
 
 
 class GameBase(SQLModel):

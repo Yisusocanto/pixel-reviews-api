@@ -3,21 +3,20 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.auth.security import TOKEN_TYPE_ACCESS, decode_token
-from src.db.database import get_session
-from src.users.models import User
-from src.users.repository import user_repo
+from src.db.database import SessionDep
+from src.modules.auth.security import TOKEN_TYPE_ACCESS, decode_token
+from src.modules.auth.service import AuthService
+from src.modules.users.dependencies import UserRepositoryDep, UserServiceDep
+from src.modules.users.models import User
 
 security_scheme = HTTPBearer(auto_error=True)
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(security_scheme)]
 
 
 async def get_current_user(
     credentials: TokenDep,
-    session: SessionDep,
+    user_repo: UserRepositoryDep,
 ) -> User:
     """
     Dependency that extracts the Bearer token from the request header,
@@ -36,7 +35,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = await user_repo.get_user(session, user_id)
+    user = await user_repo.get_user(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -48,3 +47,15 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+def get_auth_service(
+    user_repo: UserRepositoryDep,
+    user_service: UserServiceDep,
+) -> AuthService:
+    return AuthService(user_repo=user_repo, user_service=user_service)
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+__all__ = ["AuthServiceDep", "CurrentUserDep", "SessionDep", "TokenDep"]

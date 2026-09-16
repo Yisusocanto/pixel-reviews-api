@@ -4,8 +4,8 @@ from typing import Any
 import httpx
 
 from src.core.settings import settings
-from src.developers.models import DeveloperCreate
-from src.publisher.models import PublisherCreate
+from src.modules.developers.models import DeveloperCreate
+from src.modules.publisher.models import PublisherCreate
 from src.schemas.rawg_responses import GameDetailRawgResponse, GameSearchRawgResponse
 
 logger = logging.getLogger("rawg_service")

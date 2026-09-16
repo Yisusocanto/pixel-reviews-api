@@ -1,25 +1,28 @@
 import uuid
 
 from fastapi import HTTPException, status
-from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.auth.models import AuthResponse, LoginRequest, TokenResponse
-from src.auth.security import (
+from src.lib.password_handler import check_password
+from src.modules.auth.models import AuthResponse, LoginRequest, TokenResponse
+from src.modules.auth.security import (
     TOKEN_TYPE_REFRESH,
     create_access_token,
     create_refresh_token,
     decode_token,
 )
-from src.lib.password_handler import check_password
-from src.users.models import User, UserCreate, UserResponse
-from src.users.repository import user_repo
-from src.users.service import user_service
+from src.modules.users.models import User, UserCreate, UserResponse
+from src.modules.users.repository import UserRepository
+from src.modules.users.service import UserService
 
 
 class AuthService:
-    async def register(self, session: AsyncSession, data: UserCreate) -> AuthResponse:
+    def __init__(self, user_repo: UserRepository, user_service: UserService) -> None:
+        self.user_repo = user_repo
+        self.user_service = user_service
+
+    async def register(self, data: UserCreate) -> AuthResponse:
         """Registers a new user and immediately authenticates them with access and refresh tokens."""
-        user = await user_service.create(session, data)
+        user = await self.user_service.create(data)
 
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
@@ -33,12 +36,11 @@ class AuthService:
 
     async def authenticate_user(
         self,
-        session: AsyncSession,
         email: str,
         password: str,
     ) -> User:
         """Verifies credentials and returns user if valid."""
-        user = await user_repo.get_by_email(session, email)
+        user = await self.user_repo.get_by_email(email)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -56,9 +58,9 @@ class AuthService:
 
         return user
 
-    async def login(self, session: AsyncSession, data: LoginRequest) -> AuthResponse:
+    async def login(self, data: LoginRequest) -> AuthResponse:
         """Authenticates user and issues access and refresh tokens along with user info."""
-        user = await self.authenticate_user(session, data.email, data.password)
+        user = await self.authenticate_user(data.email, data.password)
 
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
@@ -72,7 +74,6 @@ class AuthService:
 
     async def refresh_tokens(
         self,
-        session: AsyncSession,
         refresh_token: str,
     ) -> TokenResponse:
         """
@@ -90,7 +91,7 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        user = await user_repo.get_user(session, user_id)
+        user = await self.user_repo.get_user(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -98,7 +99,6 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Refresh token rotation: issue both new access token and new refresh token
         new_access_token = create_access_token(user.id)
         new_refresh_token = create_refresh_token(user.id)
 
@@ -107,6 +107,3 @@ class AuthService:
             refresh_token=new_refresh_token,
             token_type="bearer",
         )
-
-
-auth_service = AuthService()

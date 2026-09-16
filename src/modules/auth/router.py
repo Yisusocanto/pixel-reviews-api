@@ -1,9 +1,8 @@
 from fastapi import APIRouter, status
 
-from src.auth.dependencies import CurrentUserDep, SessionDep
-from src.auth.models import AuthResponse, LoginRequest, RefreshTokenRequest, TokenResponse
-from src.auth.service import auth_service
-from src.users.models import User, UserCreate, UserResponse
+from src.modules.auth.dependencies import AuthServiceDep, CurrentUserDep
+from src.modules.auth.models import AuthResponse, LoginRequest, RefreshTokenRequest, TokenResponse
+from src.modules.users.models import User, UserCreate, UserResponse
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -16,9 +15,9 @@ auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 )
 async def register(
     user_data: UserCreate,
-    session: SessionDep,
+    service: AuthServiceDep,
 ) -> AuthResponse:
-    return await auth_service.register(session, user_data)
+    return await service.register(user_data)
 
 
 @auth_router.post(
@@ -28,9 +27,9 @@ async def register(
 )
 async def login(
     login_data: LoginRequest,
-    session: SessionDep,
+    service: AuthServiceDep,
 ) -> AuthResponse:
-    return await auth_service.login(session, login_data)
+    return await service.login(login_data)
 
 
 @auth_router.post(
@@ -40,9 +39,9 @@ async def login(
 )
 async def refresh_token(
     refresh_data: RefreshTokenRequest,
-    session: SessionDep,
+    service: AuthServiceDep,
 ) -> TokenResponse:
-    return await auth_service.refresh_tokens(session, refresh_data.refresh_token)
+    return await service.refresh_tokens(refresh_data.refresh_token)
 
 
 @auth_router.get(

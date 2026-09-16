@@ -2,10 +2,10 @@ import logging
 
 from fastapi import FastAPI
 
-from src.auth.router import auth_router
 from src.core.settings import settings
-from src.games.router import router as games_router
-from src.users.router import router as users_router
+from src.modules.auth.router import auth_router
+from src.modules.games.router import router as games_router
+from src.modules.users.router import router as users_router
 
 if settings.ENVIRONMENT == "development":
     logging.basicConfig(

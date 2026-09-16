@@ -1,22 +1,24 @@
 from fastapi import HTTPException, status
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.lib.password_handler import hash_password
-from src.users.models import User, UserCreate
-from src.users.repository import user_repo
-from src.users.schema import UserPagination
+from src.modules.users.models import User, UserCreate
+from src.modules.users.repository import UserRepository
+from src.modules.users.schema import UserPagination
 
 
 class UserService:
-    async def create(self, session: AsyncSession, data: UserCreate) -> User:
-        existing_username = await user_repo.get_by_username(session, data.username)
+    def __init__(self, repo: UserRepository) -> None:
+        self.repo = repo
+
+    async def create(self, data: UserCreate) -> User:
+        existing_username = await self.repo.get_by_username(data.username)
         if existing_username:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with that username already exists.",
             )
 
-        existing_email = await user_repo.get_by_email(session, data.email)
+        existing_email = await self.repo.get_by_email(data.email)
         if existing_email:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -31,25 +33,22 @@ class UserService:
             hashed_password=hashed_password,
         )
 
-        return await user_repo.create(session, new_user)
+        return await self.repo.create(new_user)
 
-    async def get_all(self, session: AsyncSession, page: int, limit: int) -> UserPagination:
+    async def get_all(self, page: int, limit: int) -> UserPagination:
         offset = (page - 1) * limit
 
-        users = await user_repo.get_all(session, offset=offset, limit=limit)
-        total = await user_repo.count_all(session)
-        total_pages = (total - 1 + limit) // limit
+        users = await self.repo.get_all(offset=offset, limit=limit)
+        total = await self.repo.count_all()
+        total_pages = (total - 1 + limit) // limit if total > 0 else 0
 
         return UserPagination(items=users, page=page, total=total, total_pages=total_pages)
 
-    async def get_user(self, session: AsyncSession, username: str) -> User:
-        user = await user_repo.get_by_username(session, username)
+    async def get_user(self, username: str) -> User:
+        user = await self.repo.get_by_username(username)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found.",
             )
         return user
-
-
-user_service = UserService()

@@ -1,5 +1,5 @@
+from src.modules.users.models import UserResponse
 from src.schemas.pagination import Pagination
-from src.users.models import UserResponse
 
 
 class UserPagination(Pagination):

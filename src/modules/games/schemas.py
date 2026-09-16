@@ -1,8 +1,8 @@
 import uuid
 
-from src.developers.models import Developer
-from src.games.models import GameBase
-from src.publisher.models import Publisher
+from src.modules.developers.models import Developer
+from src.modules.games.models import GameBase
+from src.modules.publisher.models import Publisher
 from src.schemas.pagination import Pagination
 
 

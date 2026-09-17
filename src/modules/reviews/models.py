@@ -1,6 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -33,3 +34,8 @@ class Review(ReviewBase, TimestampMixin, table=True):
 
 class ReviewCreate(ReviewBase):
     pass
+
+
+class ReviewUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None

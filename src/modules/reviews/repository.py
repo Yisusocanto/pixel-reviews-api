@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.modules.reviews.models import Review, ReviewCreate
+from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 
 
 class ReviewRepository:
@@ -62,3 +62,16 @@ class ReviewRepository:
         result = await self.session.exec(stmt)
         total = result.first()
         return total if total is not None else 0
+
+    async def delete(self, review: Review) -> Review:
+        await self.session.delete(review)
+        await self.session.flush()
+        return review
+
+    async def update(self, review: Review, new_data: ReviewUpdate) -> Review:
+        data = new_data.model_dump(exclude_unset=True)
+        review.sqlmodel_update(data)
+        self.session.add(review)
+        await self.session.flush()
+        updated_review = await self.get_by_id(review.id)
+        return updated_review or review

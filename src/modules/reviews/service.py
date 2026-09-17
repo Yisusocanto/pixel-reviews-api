@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
 from src.modules.games.service import GameService
-from src.modules.reviews.models import Review, ReviewCreate
+from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
 from src.modules.reviews.schemas import ReviewPagination
 
@@ -57,3 +57,26 @@ class ReviewService:
     ) -> int:
         total = await self.repo.count_all(user_id, game_id)
         return total
+
+    async def delete(self, review_id: uuid.UUID, user_id: uuid.UUID) -> Review:
+        review = await self.repo.get_by_id(review_id)
+        if not review:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Review not found",
+            )
+
+        if review.user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not allowed")
+
+        return await self.repo.delete(review)
+
+    async def update(self, review_id: uuid.UUID, user_id: uuid.UUID, data: ReviewUpdate) -> Review:
+        review = await self.get_by_id(review_id)
+        if not review:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+        if review.user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not allowed")
+
+        return await self.repo.update(review, data)

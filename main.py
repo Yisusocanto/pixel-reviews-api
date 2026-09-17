@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from src.core.settings import settings
 from src.modules.auth.router import auth_router
 from src.modules.games.router import router as games_router
+from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
 
 if settings.ENVIRONMENT == "development":
@@ -23,6 +24,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(games_router)
+app.include_router(review_router)
 
 
 @app.get("/health", tags=["Health"])

@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy.orm import selectinload
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -32,7 +34,7 @@ class GameRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
-    async def get_by_id(self, game_id: int) -> Game | None:
+    async def get_by_id(self, game_id: uuid.UUID) -> Game | None:
         game = await self.session.get(Game, game_id)
         return game
 

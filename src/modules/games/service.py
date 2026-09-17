@@ -1,7 +1,9 @@
+import uuid
+
 from fastapi import HTTPException, status
 
 from src.modules.developers.service import DeveloperService
-from src.modules.games.models import GameCreate
+from src.modules.games.models import Game, GameCreate
 from src.modules.games.repository import GameRepository
 from src.modules.games.schemas import GamePagination, GameResponse
 from src.modules.publisher.service import PublisherService
@@ -69,3 +71,10 @@ class GameService:
             page=page,
             total=total,
         )
+
+    async def get_by_id(self, game_id: uuid.UUID) -> Game:
+        game = await self.repo.get_by_id(game_id)
+        if not game:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+
+        return game

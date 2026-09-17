@@ -1,14 +1,16 @@
 from fastapi import HTTPException, status
 
 from src.lib.password_handler import hash_password
+from src.modules.reviews.service import ReviewService
 from src.modules.users.models import User, UserCreate
 from src.modules.users.repository import UserRepository
 from src.modules.users.schema import UserPagination
 
 
 class UserService:
-    def __init__(self, repo: UserRepository) -> None:
+    def __init__(self, repo: UserRepository, review_service: ReviewService) -> None:
         self.repo = repo
+        self.review_service = review_service
 
     async def create(self, data: UserCreate) -> User:
         existing_username = await self.repo.get_by_username(data.username)
@@ -52,3 +54,7 @@ class UserService:
                 detail="User not found.",
             )
         return user
+
+    async def get_user_reviews(self, page: int, limit: int, username: str):
+        user = await self.repo.get_by_username(username)
+        return await self.review_service.get_all(page, limit, user_id=user.id)

@@ -11,6 +11,7 @@ from src.modules.publisher.models import GamePublisherLink
 if TYPE_CHECKING:
     from src.modules.developers.models import Developer
     from src.modules.publisher.models import Publisher
+    from src.modules.reviews.models import Review
 
 
 class GameBase(SQLModel):
@@ -33,6 +34,9 @@ class Game(GameBase, table=True):
     )
     publishers: list["Publisher"] = Relationship(  # noqa: UP037
         back_populates="games", link_model=GamePublisherLink
+    )
+    reviews: list["Review"] = Relationship(  # noqa: UP037
+        back_populates="game", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 

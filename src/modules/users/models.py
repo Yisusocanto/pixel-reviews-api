@@ -1,9 +1,13 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from src.modules.reviews.models import Review
 
 
 class UserBase(SQLModel):
@@ -17,6 +21,10 @@ class User(UserBase, TimestampMixin, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str = Field(nullable=False)
+
+    reviews: list["Review"] = Relationship(  # noqa: UP037
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class UserCreate(UserBase):

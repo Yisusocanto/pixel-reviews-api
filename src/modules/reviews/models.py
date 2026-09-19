@@ -2,7 +2,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
@@ -13,8 +13,9 @@ if TYPE_CHECKING:
 
 
 class ReviewBase(SQLModel):
-    title: str
-    content: str
+    title: str | None = None
+    content: str | None = None
+    score: int = Field(ge=1, le=5)
     game_id: uuid.UUID = Field(foreign_key="game.id", ondelete="CASCADE")
 
 
@@ -29,7 +30,10 @@ class Review(ReviewBase, TimestampMixin, table=True):
         back_populates="reviews"
     )
 
-    __table_args__ = (UniqueConstraint("user_id", "game_id", name="uq_user_game"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "game_id", name="uq_user_game"),
+        CheckConstraint("score >= 1 AND score <= 5", name="check_score"),
+    )
 
 
 class ReviewCreate(ReviewBase):
@@ -39,3 +43,4 @@ class ReviewCreate(ReviewBase):
 class ReviewUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
+    score: int | None = Field(ge=1, le=5, default=None)

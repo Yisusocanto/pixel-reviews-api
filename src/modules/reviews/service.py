@@ -16,6 +16,11 @@ class ReviewService:
 
     async def create(self, data: ReviewCreate, user_id: uuid.UUID) -> Review:
         await self.game_service.get_by_id(data.game_id)
+        if data.title and not data.content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Content cannot be empty"
+            )
+
         try:
             new_review = await self.repo.create(data, user_id)
         except IntegrityError:

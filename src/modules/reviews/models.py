@@ -1,7 +1,8 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -20,6 +21,13 @@ class ReviewBase(SQLModel):
 
 
 class Review(ReviewBase, TimestampMixin, table=True):
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+    )
+
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
 

@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from pydantic import ConfigDict
+from pydantic.alias_generators import to_camel
 from sqlalchemy import ARRAY, Column, String
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -27,6 +29,13 @@ class GameBase(SQLModel):
 
 
 class Game(GameBase, table=True):
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
     developers: list["Developer"] = Relationship(  # noqa: UP037

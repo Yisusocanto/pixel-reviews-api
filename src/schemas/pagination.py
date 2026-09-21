@@ -1,9 +1,9 @@
 from typing import Any
 
-from pydantic import BaseModel
+from src.schemas.config_base import ConfigBase
 
 
-class Pagination(BaseModel):
+class Pagination(ConfigBase):
     items: list[Any]
     page: int
     total: int

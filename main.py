@@ -7,6 +7,7 @@ from src.modules.auth.router import auth_router
 from src.modules.games.router import router as games_router
 from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
+from src.modules.wishlists.router import router as wishlists_router
 
 if settings.ENVIRONMENT == "development":
     logging.basicConfig(
@@ -25,6 +26,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(games_router)
 app.include_router(review_router)
+app.include_router(wishlists_router)
 
 
 @app.get("/health", tags=["Health"])

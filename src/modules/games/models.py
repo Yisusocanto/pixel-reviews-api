@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from src.modules.developers.models import Developer
     from src.modules.publisher.models import Publisher
     from src.modules.reviews.models import Review
+    from src.modules.wishlists.models import Wishlist
 
 
 class GameBase(SQLModel):
@@ -46,6 +47,10 @@ class Game(GameBase, table=True):
     )
     reviews: list["Review"] = Relationship(  # noqa: UP037
         back_populates="game", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    wishlist: list["Wishlist"] = Relationship(  # noqa: UP037
+        back_populates="game",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
 

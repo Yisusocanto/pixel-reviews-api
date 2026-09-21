@@ -10,6 +10,7 @@ from src.core.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from src.modules.reviews.models import Review
+    from src.modules.wishlists.models import Wishlist
 
 
 class UserBase(SQLModel):
@@ -32,6 +33,9 @@ class User(UserBase, TimestampMixin, table=True):
     hashed_password: str = Field(nullable=False)
 
     reviews: list["Review"] = Relationship(  # noqa: UP037
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    wishlist: list["Wishlist"] = Relationship(  # noqa: UP037
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 

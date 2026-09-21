@@ -12,7 +12,8 @@ from src.modules.developers.models import Developer  # noqa: F401
 from src.modules.games.models import Game  # noqa: F401
 from src.modules.publisher.models import Publisher  # noqa: F401
 from src.modules.reviews.models import Review  # noqa: F401
-from src.modules.users.models import User  # noqa: F401 - Register User table metadata with SQLModel
+from src.modules.users.models import User  # noqa: F401
+from src.modules.wishlists.models import Wishlist  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

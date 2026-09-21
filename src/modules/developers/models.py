@@ -22,12 +22,6 @@ class GameDeveloperLink(SQLModel, table=True):
 
 
 class DeveloperBase(SQLModel):
-    rawg_id: int = Field(index=True, unique=True)
-    name: str = Field(index=True)
-    slug: str = Field(index=True, unique=True)
-
-
-class Developer(DeveloperBase, table=True):
     model_config = ConfigDict(
         from_attributes=True,
         alias_generator=to_camel,
@@ -35,6 +29,12 @@ class Developer(DeveloperBase, table=True):
         validate_by_name=True,
     )
 
+    rawg_id: int = Field(index=True, unique=True)
+    name: str = Field(index=True)
+    slug: str = Field(index=True, unique=True)
+
+
+class Developer(DeveloperBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
     games: list["Game"] = Relationship(back_populates="developers", link_model=GameDeveloperLink)  # noqa: UP037

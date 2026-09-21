@@ -14,12 +14,6 @@ if TYPE_CHECKING:
 
 
 class UserBase(SQLModel):
-    email: str = Field(unique=True, index=True)
-    username: str = Field(unique=True, index=True)
-    bio: str | None = Field(default=None)
-
-
-class User(UserBase, TimestampMixin, table=True):
     model_config = ConfigDict(
         from_attributes=True,
         alias_generator=to_camel,
@@ -27,6 +21,12 @@ class User(UserBase, TimestampMixin, table=True):
         validate_by_name=True,
     )
 
+    email: str = Field(unique=True, index=True)
+    username: str = Field(unique=True, index=True)
+    bio: str | None = Field(default=None)
+
+
+class User(UserBase, TimestampMixin, table=True):
     __tablename__ = "users"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

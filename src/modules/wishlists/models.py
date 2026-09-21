@@ -14,10 +14,6 @@ if TYPE_CHECKING:
 
 
 class WishlistBase(SQLModel):
-    game_id: uuid.UUID = Field(foreign_key="game.id", ondelete="CASCADE")
-
-
-class Wishlist(WishlistBase, TimestampMixin, table=True):
     model_config = ConfigDict(
         from_attributes=True,
         alias_generator=to_camel,
@@ -25,6 +21,10 @@ class Wishlist(WishlistBase, TimestampMixin, table=True):
         validate_by_name=True,
     )
 
+    game_id: uuid.UUID = Field(foreign_key="game.id", ondelete="CASCADE")
+
+
+class Wishlist(WishlistBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
 

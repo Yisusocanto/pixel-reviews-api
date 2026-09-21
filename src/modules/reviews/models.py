@@ -14,13 +14,6 @@ if TYPE_CHECKING:
 
 
 class ReviewBase(SQLModel):
-    title: str | None = None
-    content: str | None = None
-    score: int = Field(ge=1, le=5)
-    game_id: uuid.UUID = Field(foreign_key="game.id", ondelete="CASCADE")
-
-
-class Review(ReviewBase, TimestampMixin, table=True):
     model_config = ConfigDict(
         from_attributes=True,
         alias_generator=to_camel,
@@ -28,6 +21,13 @@ class Review(ReviewBase, TimestampMixin, table=True):
         validate_by_name=True,
     )
 
+    title: str | None = None
+    content: str | None = None
+    score: int = Field(ge=1, le=5)
+    game_id: uuid.UUID = Field(foreign_key="game.id", ondelete="CASCADE")
+
+
+class Review(ReviewBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
 

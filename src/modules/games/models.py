@@ -18,6 +18,13 @@ if TYPE_CHECKING:
 
 
 class GameBase(SQLModel):
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+    )
+
     title: str = Field(index=True)
     slug: str = Field(index=True, unique=True)
     rawg_id: int = Field(index=True, unique=True)
@@ -30,13 +37,6 @@ class GameBase(SQLModel):
 
 
 class Game(GameBase, table=True):
-    model_config = ConfigDict(
-        from_attributes=True,
-        alias_generator=to_camel,
-        validate_by_alias=True,
-        validate_by_name=True,
-    )
-
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
     developers: list["Developer"] = Relationship(  # noqa: UP037

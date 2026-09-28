@@ -79,13 +79,25 @@ class RawgService:
         if not response:
             return None
 
-        screenshots = await self.get_game_screenshots(game_slug)
         game_json = response.json()
+
+        # Handle RAWG slug redirects (e.g. {'redirect': True, 'slug': 'god-of-war-2'})
+        if game_json.get("redirect") and game_json.get("slug"):
+            redirect_slug = game_json["slug"]
+            logger.info("[RAWG] Slug '%s' redirects to '%s'", game_slug, redirect_slug)
+            return await self.get_game_details(redirect_slug)
+
+        if "id" not in game_json:
+            logger.error("[RAWG] Missing 'id' in game response for '%s': %s", game_slug, game_json)
+            return None
+
+        canonical_slug = game_json.get("slug", game_slug)
+        screenshots = await self.get_game_screenshots(canonical_slug)
 
         return GameDetailRawgResponse(
             rawg_id=game_json["id"],
             title=game_json.get("name") or game_json.get("title", ""),
-            slug=game_json.get("slug", game_slug),
+            slug=canonical_slug,
             description=game_json.get("description_raw", ""),
             release_date=game_json.get("released"),
             image_url=game_json.get("background_image"),

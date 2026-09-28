@@ -36,6 +36,7 @@ class ReviewRepository:
     ) -> list[Review]:
         stmt = (
             select(Review)
+            .where(Review.title != None)
             .offset(offset)
             .limit(limit)
             .options(selectinload(Review.user), selectinload(Review.game))
@@ -52,7 +53,7 @@ class ReviewRepository:
     async def count_all(
         self, user_id: uuid.UUID | None = None, game_id: uuid.UUID | None = None
     ) -> int:
-        stmt = select(func.count(Review.id))
+        stmt = select(func.count(Review.id)).where(Review.title != None)
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
 

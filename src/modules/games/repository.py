@@ -34,6 +34,15 @@ class GameRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
+    async def get_by_rawg_id(self, rawg_id: int) -> Game | None:
+        stmt = (
+            select(Game)
+            .where(Game.rawg_id == rawg_id)
+            .options(selectinload(Game.developers), selectinload(Game.publishers))
+        )
+        result = await self.session.exec(stmt)
+        return result.first()
+
     async def get_by_id(self, game_id: uuid.UUID) -> Game | None:
         game = await self.session.get(Game, game_id)
         return game

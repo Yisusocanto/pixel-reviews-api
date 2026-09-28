@@ -3,16 +3,20 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
+from src.modules.games.service import GameService
 from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
 from src.modules.reviews.schemas import ReviewPagination
 
 
 class ReviewService:
-    def __init__(self, repo: ReviewRepository):
+    def __init__(self, repo: ReviewRepository, game_service: GameService):
         self.repo = repo
+        self.game_service = game_service
 
     async def create(self, data: ReviewCreate, user_id: uuid.UUID) -> Review:
+        await self.game_service.get_by_id(data.game_id)
+
         if data.title and not data.content:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Content cannot be empty"

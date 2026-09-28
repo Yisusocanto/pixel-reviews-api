@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query
 
 from src.modules.games.dependencies import GameServiceDep
 from src.modules.games.schemas import GamePagination, GameResponse
+from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
 from src.schemas.rawg_responses import GameSearchRawgResponse
 
@@ -31,9 +32,11 @@ async def game_details(game_slug: str, service: GameServiceDep):
 
 @router.get("/{game_slug}/reviews", response_model=ReviewPagination)
 async def get_game_reviews(
-    service: GameServiceDep,
     game_slug: str,
+    game_service: GameServiceDep,
+    review_service: ReviewServiceDep,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1)] = 10,
 ):
-    return await service.get_game_reviews(page, limit, game_slug)
+    game = await game_service.get_game_detail(game_slug)
+    return await review_service.get_all(page=page, limit=limit, game_id=game.id)

@@ -7,8 +7,6 @@ from src.modules.games.models import Game, GameCreate
 from src.modules.games.repository import GameRepository
 from src.modules.games.schemas import GamePagination, GameResponse
 from src.modules.publisher.service import PublisherService
-from src.modules.reviews.schemas import ReviewPagination
-from src.modules.reviews.service import ReviewService
 from src.schemas.rawg_responses import GameSearchRawgResponse
 from src.services.rawg_service import RawgService, rawg_service
 
@@ -19,13 +17,11 @@ class GameService:
         repo: GameRepository,
         dev_service: DeveloperService,
         pub_service: PublisherService,
-        review_service: ReviewService,
         rawg_client: RawgService = rawg_service,
     ) -> None:
         self.repo = repo
         self.dev_service = dev_service
         self.pub_service = pub_service
-        self.review_service = review_service
         self.rawg_client = rawg_client
 
     async def search_games(self, game_title: str) -> list[GameSearchRawgResponse]:
@@ -89,8 +85,3 @@ class GameService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
 
         return game
-
-    async def get_game_reviews(self, page: int, limit: int, game_slug: str) -> ReviewPagination:
-        game = await self.get_game_detail(game_slug)
-        reviews = await self.review_service.get_all(page, limit, game_id=game.id)
-        return reviews

@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from src.modules.games.dependencies import GameServiceDep
-from src.modules.games.schemas import GamePagination, GameResponse
+from src.modules.games.schemas import GamePagination, GameResponse, GameStats
 from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
 from src.schemas.rawg_responses import GameSearchRawgResponse
@@ -40,3 +40,9 @@ async def get_game_reviews(
 ):
     game = await game_service.get_game_detail(game_slug)
     return await review_service.get_all(page=page, limit=limit, game_id=game.id)
+
+
+@router.get("/{game_slug}/stats", response_model=GameStats)
+async def game_stats(service: GameServiceDep, review_service: ReviewServiceDep, game_slug: str):
+    game = await service.get_game_detail(game_slug)
+    return await review_service.game_stats(game.id)

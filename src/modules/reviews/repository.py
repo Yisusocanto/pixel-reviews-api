@@ -65,7 +65,22 @@ class ReviewRepository:
     async def count_all(
         self, user_id: uuid.UUID | None = None, game_id: uuid.UUID | None = None
     ) -> int:
+        """Returns only the number of reviews that have a title and content"""
         stmt = select(func.count(Review.id)).where(Review.title != None)
+        if user_id:
+            stmt = stmt.where(Review.user_id == user_id)
+
+        if game_id:
+            stmt = stmt.where(Review.game_id == game_id)
+
+        result = await self.session.exec(stmt)
+        total = result.first()
+        return total if total is not None else 0
+
+    async def count_all_ratings(
+        self, user_id: uuid.UUID | None = None, game_id: uuid.UUID | None = None
+    ) -> int:
+        stmt = select(func.count(Review.id))
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
 
@@ -88,3 +103,17 @@ class ReviewRepository:
         await self.session.flush()
         updated_review = await self.get_by_id(review.id)
         return updated_review or review
+
+    async def get_avg_rating(self, game_id: uuid.UUID) -> float:
+        stmt = select(func.avg(Review.score)).where(Review.game_id == game_id)
+        result = await self.session.exec(stmt)
+        return result.first()
+
+    async def get_score_distribution(self, game_id: uuid.UUID):
+        stmt = (
+            select(Review.score, func.count(Review.score))
+            .where(Review.game_id == game_id)
+            .group_by(Review.score)
+        )
+        result = await self.session.exec(stmt)
+        return result.all()

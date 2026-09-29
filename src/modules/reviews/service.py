@@ -3,6 +3,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
+from src.modules.games.schemas import GameStats
 from src.modules.games.service import GameService
 from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
@@ -94,3 +95,20 @@ class ReviewService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not allowed")
 
         return await self.repo.update(review, data)
+
+    async def game_stats(self, game_id: uuid.UUID):
+        total = await self.repo.count_all_ratings(game_id=game_id)
+        avg_rating = await self.repo.get_avg_rating(game_id)
+        distribution = await self.repo.get_score_distribution(game_id)
+        distribution_dict = dict(distribution)
+        rating_distribution = [
+            {"stars": score,
+             "percentage": (distribution_dict.get(score, 1) / total) * 100 if distribution_dict.get(score, 0) != 0 else 0,
+             "count": distribution_dict.get(score, 0)}
+            for score in range(1, 6)
+        ]
+        return GameStats(
+            total_reviews=total,
+            avg_ratings=avg_rating,
+            rating_distribution=rating_distribution,
+        )

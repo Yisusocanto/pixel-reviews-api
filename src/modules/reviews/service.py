@@ -39,6 +39,14 @@ class ReviewService:
 
         return review
 
+    async def get_user_game_review(self, game_id: uuid.UUID, user_id: uuid.UUID) -> Review:
+        game = await self.game_service.get_by_id(game_id)
+        review = await self.repo.get_user_game_review(game.id, user_id)
+        if not review:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+        return review
+
     async def get_all(
         self,
         page: int,

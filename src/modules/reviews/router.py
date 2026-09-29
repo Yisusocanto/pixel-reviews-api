@@ -32,6 +32,11 @@ async def create(
     return await service.create(data, current_user.id)
 
 
+@router.get("/user-review/{game_id}", response_model=ReviewResponse)
+async def get_user_game_review(service: ReviewServiceDep, game_id: uuid.UUID, user: CurrentUserDep):
+    return await service.get_user_game_review(game_id, user.id)
+
+
 @router.get("/{review_id}", response_model=ReviewResponse)
 async def get_by_id(review_id: uuid.UUID, service: ReviewServiceDep):
     return await service.get_by_id(review_id)

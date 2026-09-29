@@ -27,6 +27,18 @@ class ReviewRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
+    async def get_user_game_review(self, game_id: uuid.UUID, user_id: uuid.UUID) -> Review | None:
+        stmt = (
+            select(Review)
+            .where(Review.game_id == game_id, Review.user_id == user_id)
+            .options(
+                selectinload(Review.game),
+                selectinload(Review.user),
+            )
+        )
+        result = await self.session.exec(stmt)
+        return result.first()
+
     async def get_all(
         self,
         offset: int,

@@ -102,13 +102,17 @@ class ReviewService:
         distribution = await self.repo.get_score_distribution(game_id)
         distribution_dict = dict(distribution)
         rating_distribution = [
-            {"stars": score,
-             "percentage": (distribution_dict.get(score, 1) / total) * 100 if distribution_dict.get(score, 0) != 0 else 0,
-             "count": distribution_dict.get(score, 0)}
+            {
+                "stars": score,
+                "percentage": (distribution_dict.get(score, 1) / total) * 100
+                if distribution_dict.get(score, 0) != 0
+                else 0,
+                "count": distribution_dict.get(score, 0),
+            }
             for score in range(1, 6)
         ]
         return GameStats(
             total_reviews=total,
-            avg_ratings=avg_rating,
+            avg_ratings=avg_rating if avg_rating is not None else 0,
             rating_distribution=rating_distribution,
         )

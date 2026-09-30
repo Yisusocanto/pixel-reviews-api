@@ -104,7 +104,7 @@ class ReviewRepository:
         updated_review = await self.get_by_id(review.id)
         return updated_review or review
 
-    async def get_avg_rating(self, game_id: uuid.UUID) -> float:
+    async def get_avg_rating(self, game_id: uuid.UUID) -> float | None:
         stmt = select(func.avg(Review.score)).where(Review.game_id == game_id)
         result = await self.session.exec(stmt)
         return result.first()

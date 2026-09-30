@@ -30,6 +30,11 @@ class WishlistRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
+    async def get_wishlist_item(self, user_id: uuid.UUID, game_id: uuid.UUID) -> Wishlist | None:
+        stmt = select(Wishlist).where(Wishlist.game_id == game_id, Wishlist.user_id == user_id)
+        result = await self.session.exec(stmt)
+        return result.first()
+
     async def remove(self, wishlist: Wishlist) -> Wishlist:
         await self.session.delete(wishlist)
         return wishlist

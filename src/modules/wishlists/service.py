@@ -1,35 +1,29 @@
 import uuid
 
-from fastapi import HTTPException, status
-from sqlalchemy.exc import IntegrityError
-
 from src.modules.wishlists.models import Wishlist, WishlistCreate
 from src.modules.wishlists.repository import WishlistRepository
-from src.modules.wishlists.schemas import WishlistPagination
+from src.modules.wishlists.schemas import InUserWishlist, WishlistPagination
 
 
 class WishlistService:
     def __init__(self, repo: WishlistRepository):
         self.repo = repo
 
-    async def create(self, data: WishlistCreate, user_id: uuid.UUID) -> Wishlist:
-        try:
+    async def toggle(self, data: WishlistCreate, user_id: uuid.UUID) -> InUserWishlist:
+        existing_wishlist = await self.repo.get_wishlist_item(user_id=user_id, game_id=data.game_id)
+        if not existing_wishlist:
             new_wishlist_item = await self.repo.create(data, user_id)
-            return new_wishlist_item
-        except IntegrityError:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="Game already in you wishlist"
-            )
+            return InUserWishlist(in_wishlist=True, wishlist_id=new_wishlist_item.id)
 
-    async def remove(self, wishlist_id: uuid.UUID, user_id: uuid.UUID) -> Wishlist:
-        wishlist = await self.repo.get_by_id(wishlist_id)
-        if not wishlist:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wishlist not found")
+        await self.repo.remove(existing_wishlist)
+        return InUserWishlist(in_wishlist=False, wishlist_id=None)
 
-        if wishlist.user_id != user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not allowed")
+    async def get_wishlist_item(self, game_id: uuid.UUID, user_id: uuid.UUID):
+        wishlist_item = await self.repo.get_wishlist_item(user_id=user_id, game_id=game_id)
 
-        return await self.repo.remove(wishlist)
+        return InUserWishlist(
+            in_wishlist=bool(wishlist_item), wishlist_id=wishlist_item.id if wishlist_item else None
+        )
 
     async def get_all(self, page: int, limit: int, user_id: uuid.UUID) -> WishlistPagination:
         offset = (page - 1) * limit

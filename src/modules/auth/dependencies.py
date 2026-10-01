@@ -13,6 +13,9 @@ from src.modules.users.models import User
 security_scheme = HTTPBearer(auto_error=True)
 TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(security_scheme)]
 
+optional_security_scheme = HTTPBearer(auto_error=False)
+OptionalTokenDep = Annotated[HTTPAuthorizationCredentials | None, Depends(optional_security_scheme)]
+
 
 async def get_current_user(
     credentials: TokenDep,
@@ -46,7 +49,30 @@ async def get_current_user(
     return user
 
 
+async def get_optional_current_user(
+    credentials: OptionalTokenDep,
+    user_repo: UserRepositoryDep,
+) -> User | None:
+    """
+    Dependency that optionally extracts the Bearer token.
+    Returns the User if valid token is provided, or None if no/invalid token.
+    """
+    if not credentials:
+        return None
+    try:
+        token = credentials.credentials
+        payload = decode_token(token, expected_type=TOKEN_TYPE_ACCESS)
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        user_id = uuid.UUID(user_id_str)
+        return await user_repo.get_user(user_id)
+    except HTTPException, ValueError, TypeError:
+        return None
+
+
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+OptionalCurrentUserDep = Annotated[User | None, Depends(get_optional_current_user)]
 
 
 def get_auth_service(
@@ -58,4 +84,4 @@ def get_auth_service(
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 
-__all__ = ["AuthServiceDep", "CurrentUserDep", "SessionDep", "TokenDep"]
+__all__ = ["AuthServiceDep", "CurrentUserDep", "OptionalCurrentUserDep", "SessionDep", "TokenDep"]

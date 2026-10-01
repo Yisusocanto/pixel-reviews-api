@@ -1,9 +1,11 @@
 import uuid
 
+from sqlalchemy import exists, literal
 from sqlalchemy.orm import selectinload
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.modules.likes.models import Like
 from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 
 
@@ -27,9 +29,26 @@ class ReviewRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
-    async def get_user_game_review(self, game_id: uuid.UUID, user_id: uuid.UUID) -> Review | None:
+    async def get_by_id_with_likes(
+        self, review_id: uuid.UUID, current_user_id: uuid.UUID | None = None
+    ) -> tuple[Review, int, bool] | None:
+        likes_count = self._get_likes_count()
+        liked_by_user = self._get_liked_by_user(current_user_id)
         stmt = (
-            select(Review)
+            select(Review, likes_count, liked_by_user)
+            .where(Review.id == review_id)
+            .options(selectinload(Review.user), selectinload(Review.game))
+        )
+        result = await self.session.exec(stmt)
+        return result.first()
+
+    async def get_user_game_review(
+        self, game_id: uuid.UUID, user_id: uuid.UUID
+    ) -> tuple[Review, int, bool] | None:
+        likes_count = self._get_likes_count()
+        liked_by_user = self._get_liked_by_user(user_id)
+        stmt = (
+            select(Review, likes_count, liked_by_user)
             .where(Review.game_id == game_id, Review.user_id == user_id)
             .options(
                 selectinload(Review.game),
@@ -39,16 +58,40 @@ class ReviewRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
+    def _get_likes_count(self):
+        likes_count = (
+            select(func.count())
+            .select_from(Like)
+            .where(Like.review_id == Review.id)
+            .scalar_subquery()
+            .label("likes_count")
+        )
+        return likes_count
+
+    def _get_liked_by_user(self, current_user_id: uuid.UUID | None):
+        if not current_user_id:
+            return literal(False).label("liked_by_user")
+        liked_by_user = (
+            exists()
+            .where(Like.review_id == Review.id, Like.user_id == current_user_id)
+            .label("liked_by_user")
+        )
+        return liked_by_user
+
     async def get_all(
         self,
         offset: int,
         limit: int,
         user_id: uuid.UUID | None = None,
         game_id: uuid.UUID | None = None,
-    ) -> list[Review]:
+        current_user_id: uuid.UUID | None = None,
+    ) -> list[tuple[Review, int, bool]]:
+        likes_count = self._get_likes_count()
+        liked_by_user = self._get_liked_by_user(current_user_id)
         stmt = (
-            select(Review)
+            select(Review, likes_count, liked_by_user)
             .where(Review.title != None)
+            .order_by(Review.created_at.desc())
             .offset(offset)
             .limit(limit)
             .options(selectinload(Review.user), selectinload(Review.game))

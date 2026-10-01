@@ -1,6 +1,6 @@
 import uuid
 
-from src.modules.wishlists.models import Wishlist, WishlistCreate
+from src.modules.wishlists.models import WishlistCreate
 from src.modules.wishlists.repository import WishlistRepository
 from src.modules.wishlists.schemas import InUserWishlist, WishlistPagination
 

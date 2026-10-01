@@ -7,7 +7,7 @@ from src.modules.games.schemas import GameStats
 from src.modules.games.service import GameService
 from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
-from src.modules.reviews.schemas import ReviewPagination
+from src.modules.reviews.schemas import ReviewPagination, ReviewResponse
 
 
 class ReviewService:
@@ -33,20 +33,28 @@ class ReviewService:
 
         return new_review
 
-    async def get_by_id(self, review_id: uuid.UUID) -> Review | None:
-        review = await self.repo.get_by_id(review_id)
-        if not review:
+    async def get_by_id(
+        self, review_id: uuid.UUID, current_user_id: uuid.UUID | None = None
+    ) -> ReviewResponse:
+        result = await self.repo.get_by_id_with_likes(review_id, current_user_id)
+        if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+        review, count, is_liked = result
+        return ReviewResponse.model_validate(
+            review, update={"likes_count": count, "liked_by_user": is_liked}
+        )
 
-        return review
-
-    async def get_user_game_review(self, game_id: uuid.UUID, user_id: uuid.UUID) -> Review:
+    async def get_user_game_review(
+        self, game_id: uuid.UUID, user_id: uuid.UUID
+    ) -> ReviewResponse:
         game = await self.game_service.get_by_id(game_id)
-        review = await self.repo.get_user_game_review(game.id, user_id)
-        if not review:
+        result = await self.repo.get_user_game_review(game.id, user_id)
+        if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
-
-        return review
+        review, count, is_liked = result
+        return ReviewResponse.model_validate(
+            review, update={"likes_count": count, "liked_by_user": is_liked}
+        )
 
     async def get_all(
         self,
@@ -54,9 +62,22 @@ class ReviewService:
         limit: int,
         user_id: uuid.UUID | None = None,
         game_id: uuid.UUID | None = None,
+        current_user_id: uuid.UUID | None = None,
     ) -> ReviewPagination:
         offset = (page - 1) * limit
-        reviews = await self.repo.get_all(offset, limit, user_id, game_id)
+        result = await self.repo.get_all(
+            offset=offset,
+            limit=limit,
+            user_id=user_id,
+            game_id=game_id,
+            current_user_id=current_user_id,
+        )
+        reviews = [
+            ReviewResponse.model_validate(
+                review, update={"likes_count": count, "liked_by_user": is_liked}
+            )
+            for review, count, is_liked in result
+        ]
         total = await self.repo.count_all(user_id=user_id, game_id=game_id)
         total_pages = (total - 1 + limit) // limit if total > 0 else 0
 
@@ -87,7 +108,7 @@ class ReviewService:
         return await self.repo.delete(review)
 
     async def update(self, review_id: uuid.UUID, user_id: uuid.UUID, data: ReviewUpdate) -> Review:
-        review = await self.get_by_id(review_id)
+        review = await self.repo.get_by_id(review_id)
         if not review:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
 

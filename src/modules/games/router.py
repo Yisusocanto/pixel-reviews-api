@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
+from src.modules.auth.dependencies import OptionalCurrentUserDep
 from src.modules.games.dependencies import GameServiceDep
 from src.modules.games.schemas import GamePagination, GameResponse, GameStats
 from src.modules.reviews.dependencies import ReviewServiceDep
@@ -37,9 +38,13 @@ async def get_game_reviews(
     review_service: ReviewServiceDep,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1)] = 10,
+    current_user: OptionalCurrentUserDep = None,
 ):
     game = await game_service.get_game_detail(game_slug)
-    return await review_service.get_all(page=page, limit=limit, game_id=game.id)
+    current_user_id = current_user.id if current_user else None
+    return await review_service.get_all(
+        page=page, limit=limit, game_id=game.id, current_user_id=current_user_id
+    )
 
 
 @router.get("/{game_slug}/stats", response_model=GameStats)

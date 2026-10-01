@@ -10,6 +10,7 @@ from src.core.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from src.modules.games.models import Game
+    from src.modules.likes.models import Like
     from src.modules.users.models import User
 
 
@@ -36,6 +37,9 @@ class Review(ReviewBase, TimestampMixin, table=True):
     )
     game: "Game" = Relationship(  # noqa: UP037
         back_populates="reviews"
+    )
+    likes: list["Like"] = Relationship(  # noqa: UP037
+        back_populates="review", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
     __table_args__ = (

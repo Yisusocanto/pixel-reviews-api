@@ -48,7 +48,7 @@ async def get_by_id(
     current_user: OptionalCurrentUserDep = None,
 ):
     current_user_id = current_user.id if current_user else None
-    return await service.get_by_id(review_id, current_user_id=current_user_id)
+    return await service.get_by_id_with_likes(review_id, current_user_id=current_user_id)
 
 
 @router.delete("/{review_id}", response_model=Review)

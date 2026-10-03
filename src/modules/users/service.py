@@ -1,10 +1,12 @@
+import uuid
+
 from fastapi import HTTPException, status
 
 from src.lib.password_handler import hash_password
 from src.modules.reviews.service import ReviewService
-from src.modules.users.models import User, UserCreate
+from src.modules.users.models import User, UserCreate, UserUpdate
 from src.modules.users.repository import UserRepository
-from src.modules.users.schema import UserPagination
+from src.modules.users.schemas import UserPagination
 from src.modules.wishlists.schemas import WishlistPagination
 from src.modules.wishlists.service import WishlistService
 
@@ -42,6 +44,16 @@ class UserService:
 
         return await self.repo.create(new_user)
 
+    async def update(self, data: UserUpdate, user_id: uuid.UUID) -> User:
+        user = await self.repo.get_user(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        updated_user = await self.repo.update(user, data)
+        return updated_user
+
     async def get_all(self, page: int, limit: int) -> UserPagination:
         offset = (page - 1) * limit
 
@@ -60,9 +72,13 @@ class UserService:
             )
         return user
 
-    async def get_user_reviews(self, page: int, limit: int, username: str):
-        user = await self.repo.get_by_username(username)
-        return await self.review_service.get_all(page, limit, user_id=user.id)
+    async def get_user_reviews(
+        self, page: int, limit: int, username: str, current_user_id: uuid.UUID | None = None
+    ):
+        user = await self.get_user(username)
+        return await self.review_service.get_all(
+            page, limit, user_id=user.id, current_user_id=current_user_id
+        )
 
     async def user_wishlist(self, page: int, limit: int, username: str) -> WishlistPagination:
         user = await self.get_user(username)

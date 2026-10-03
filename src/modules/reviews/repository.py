@@ -152,10 +152,24 @@ class ReviewRepository:
         result = await self.session.exec(stmt)
         return result.first()
 
+    async def get_user_avg_rating(self, user_id: uuid.UUID) -> float | None:
+        stmt = select(func.avg(Review.score)).where(Review.user_id == user_id)
+        result = await self.session.exec(stmt)
+        return result.first()
+
     async def get_score_distribution(self, game_id: uuid.UUID):
         stmt = (
             select(Review.score, func.count(Review.score))
             .where(Review.game_id == game_id)
+            .group_by(Review.score)
+        )
+        result = await self.session.exec(stmt)
+        return result.all()
+
+    async def get_user_score_distribution(self, user_id: uuid.UUID):
+        stmt = (
+            select(Review.score, func.count(Review.score))
+            .where(Review.user_id == user_id)
             .group_by(Review.score)
         )
         result = await self.session.exec(stmt)

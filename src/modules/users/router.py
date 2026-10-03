@@ -2,10 +2,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
+from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
+from src.modules.likes.dependencies import LikeServiceDep
+from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
 from src.modules.users.dependencies import UserServiceDep
-from src.modules.users.models import UserResponse
-from src.modules.users.schema import UserPagination
+from src.modules.users.models import UserResponse, UserUpdate
+from src.modules.users.schemas import UserPagination, UserStats
 from src.modules.wishlists.schemas import WishlistPagination
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -20,19 +23,41 @@ async def get_all(
     return await service.get_all(page, limit)
 
 
+@router.patch("", response_model=UserResponse)
+async def update(service: UserServiceDep, data: UserUpdate, user: CurrentUserDep):
+    return await service.update(data, user.id)
+
+
 @router.get("/{username}", response_model=UserResponse)
 async def get_user(username: str, service: UserServiceDep):
     return await service.get_user(username)
+
+
+@router.get("/{username}/stats", response_model=UserStats)
+async def user_stats(
+    service: UserServiceDep,
+    username: str,
+    review_service: ReviewServiceDep,
+    like_service: LikeServiceDep,
+):
+    user = await service.get_user(username)
+    user_review_stats = await review_service.user_stats(user.id)
+    user_likes = await like_service.count_user_likes(user.id)
+    return UserStats(**user_review_stats.model_dump(), total_likes=user_likes)
 
 
 @router.get("/{username}/reviews", response_model=ReviewPagination)
 async def user_reviews(
     service: UserServiceDep,
     username: str,
+    optional_current_user: OptionalCurrentUserDep,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1)] = 10,
 ):
-    return await service.get_user_reviews(page=page, limit=limit, username=username)
+    current_user_id = optional_current_user.id if optional_current_user else None
+    return await service.get_user_reviews(
+        page=page, limit=limit, username=username, current_user_id=current_user_id
+    )
 
 
 @router.get("/{username}/wishlist", response_model=WishlistPagination)

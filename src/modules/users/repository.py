@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.modules.users.models import User
+from src.modules.users.models import User, UserUpdate
 
 
 class UserRepository:
@@ -40,3 +40,11 @@ class UserRepository:
         result = await self.session.exec(stmt)
         total = result.first()
         return total if total is not None else 0
+
+    async def update(self, user: User, new_data: UserUpdate) -> User:
+        data = new_data.model_dump(exclude_unset=True)
+        user.sqlmodel_update(data)
+        self.session.add(user)
+        await self.session.flush()
+        await self.session.refresh(user)
+        return user

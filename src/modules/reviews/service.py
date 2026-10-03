@@ -8,6 +8,7 @@ from src.modules.games.service import GameService
 from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
 from src.modules.reviews.schemas import ReviewPagination, ReviewResponse
+from src.modules.users.schemas import UserReviewStats
 
 
 class ReviewService:
@@ -33,7 +34,7 @@ class ReviewService:
 
         return new_review
 
-    async def get_by_id(
+    async def get_by_id_with_likes(
         self, review_id: uuid.UUID, current_user_id: uuid.UUID | None = None
     ) -> ReviewResponse:
         result = await self.repo.get_by_id_with_likes(review_id, current_user_id)
@@ -44,9 +45,14 @@ class ReviewService:
             review, update={"likes_count": count, "liked_by_user": is_liked}
         )
 
-    async def get_user_game_review(
-        self, game_id: uuid.UUID, user_id: uuid.UUID
-    ) -> ReviewResponse:
+    async def get_by_id(self, review_id: uuid.UUID) -> Review:
+        review = await self.repo.get_by_id(review_id)
+        if not review:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+        return review
+
+    async def get_user_game_review(self, game_id: uuid.UUID, user_id: uuid.UUID) -> ReviewResponse:
         game = await self.game_service.get_by_id(game_id)
         result = await self.repo.get_user_game_review(game.id, user_id)
         if not result:
@@ -135,5 +141,28 @@ class ReviewService:
         return GameStats(
             total_reviews=total,
             avg_ratings=avg_rating if avg_rating is not None else 0,
+            rating_distribution=rating_distribution,
+        )
+
+    async def user_stats(self, user_id: uuid.UUID):
+        total_ratings = await self.repo.count_all_ratings(user_id=user_id)
+        total_reviews = await self.repo.count_all(user_id=user_id)
+        avg_ratings = await self.repo.get_user_avg_rating(user_id=user_id)
+        distribution = await self.repo.get_user_score_distribution(user_id=user_id)
+        distribution_dict = dict(distribution)
+        rating_distribution = [
+            {
+                "stars": score,
+                "percentage": (distribution_dict.get(score, 1) / total_ratings) * 100
+                if distribution_dict.get(score, 0) != 0
+                else 0,
+                "count": distribution_dict.get(score, 0),
+            }
+            for score in range(1, 6)
+        ]
+        return UserReviewStats(
+            total_reviews=total_reviews,
+            total_ratings=total_ratings,
+            avg_rating=avg_ratings if avg_ratings is not None else 0,
             rating_distribution=rating_distribution,
         )

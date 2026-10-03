@@ -34,3 +34,8 @@ class LikeRepository:
         stmt = select(func.count()).select_from(Like).where(Like.review_id == review_id)
         result = await self.session.exec(stmt)
         return result.one()
+
+    async def count_user_likes(self, user_id: uuid.UUID) -> int:
+        stmt = select(func.count(Like.id)).where(Like.user_id == user_id)
+        result = await self.session.exec(stmt)
+        return result.first()

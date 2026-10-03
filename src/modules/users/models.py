@@ -7,6 +7,7 @@ from pydantic.alias_generators import to_camel
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
+from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
     from src.modules.likes.models import Like
@@ -52,3 +53,8 @@ class UserResponse(UserBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+class UserUpdate(ConfigBase):
+    bio: str | None = None
+    

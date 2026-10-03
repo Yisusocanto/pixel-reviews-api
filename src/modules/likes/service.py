@@ -3,16 +3,16 @@ import uuid
 from fastapi import HTTPException, status
 
 from src.modules.likes.repository import LikeRepository
-from src.modules.reviews.repository import ReviewRepository
+from src.modules.reviews.service import ReviewService
 
 
 class LikeService:
-    def __init__(self, repo: LikeRepository, review_repo: ReviewRepository):
+    def __init__(self, repo: LikeRepository, review_service: ReviewService):
         self.repo = repo
-        self.review_repo = review_repo
+        self.review_service = review_service
 
     async def toggle(self, review_id: uuid.UUID, user_id: uuid.UUID) -> tuple[bool, int]:
-        review = await self.review_repo.get_by_id(review_id)
+        review = await self.review_service.get_by_id(review_id)
         if not review:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
 
@@ -26,3 +26,6 @@ class LikeService:
 
         likes_count = await self.repo.count_by_review_id(review_id)
         return liked, likes_count
+
+    async def count_user_likes(self, user_id: uuid.UUID) -> int:
+        return await self.repo.count_user_likes(user_id)

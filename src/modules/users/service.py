@@ -1,6 +1,8 @@
+import logging
 import uuid
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.lib.password_handler import hash_password
 from src.modules.reviews.service import ReviewService
@@ -9,15 +11,27 @@ from src.modules.users.repository import UserRepository
 from src.modules.users.schemas import UserPagination
 from src.modules.wishlists.schemas import WishlistPagination
 from src.modules.wishlists.service import WishlistService
+from src.services.storage_service import StorageError, StorageService
+
+logger = logging.getLogger("user_service")
+
+PHOTO_EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+MAX_PROFILE_PHOTO_BYTES = 3 * 1024 * 1024
+IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 
 
 class UserService:
     def __init__(
-        self, repo: UserRepository, review_service: ReviewService, wishlist_service: WishlistService
+        self,
+        repo: UserRepository,
+        review_service: ReviewService,
+        wishlist_service: WishlistService,
+        storage: StorageService,
     ) -> None:
         self.repo = repo
         self.review_service = review_service
         self.wishlist_service = wishlist_service
+        self.storage = storage
 
     async def create(self, data: UserCreate) -> User:
         existing_username = await self.repo.get_by_username(data.username)
@@ -84,3 +98,51 @@ class UserService:
         user = await self.get_user(username)
         wishlist = await self.wishlist_service.get_all(page, limit, user.id)
         return wishlist
+
+    async def update_profile_photo(
+        self, user: User, content: bytes, content_type: str | None
+    ) -> User:
+        extension = PHOTO_EXTENSIONS.get(content_type or "")
+        if extension is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File type not supported.",
+            )
+
+        if not content or len(content) > MAX_PROFILE_PHOTO_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File is empty or exceeds the size limit.",
+            )
+
+        old_key = user.profile_photo_key
+        new_key = f"profile/{uuid.uuid4()}{extension}"
+
+        try:
+            await self.storage.upload(
+                new_key, content, content_type, cache_control=IMMUTABLE_CACHE_CONTROL
+            )
+        except StorageError:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to upload profile photo.",
+            )
+
+        try:
+            updated_user = await self.repo.set_profile_photo_key(user, new_key)
+        except SQLAlchemyError:
+            logger.exception("[USERS] DB update failed for user %s, removing %s", user.id, new_key)
+            await self._delete_photo_quietly(new_key)
+            raise
+
+        if old_key:
+            await self._delete_photo_quietly(old_key)
+
+        logger.info("[USERS] User %s changed profile photo to %s", user.id, new_key)
+        return updated_user
+
+    async def _delete_photo_quietly(self, key: str) -> None:
+        try:
+            await self.storage.delete(key)
+        except StorageError:
+            logger.warning("[USERS] Orphan file left in storage: %s", key)

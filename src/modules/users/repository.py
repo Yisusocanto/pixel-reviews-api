@@ -48,3 +48,10 @@ class UserRepository:
         await self.session.flush()
         await self.session.refresh(user)
         return user
+
+    async def set_profile_photo_key(self, user: User, key: str) -> User:
+        user.profile_photo_key = key
+        self.session.add(user)
+        await self.session.flush()
+        await self.session.refresh(user)
+        return user

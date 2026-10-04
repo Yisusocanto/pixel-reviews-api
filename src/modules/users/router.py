@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, File, Query, UploadFile
 
 from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
 from src.modules.likes.dependencies import LikeServiceDep
@@ -9,6 +9,7 @@ from src.modules.reviews.schemas import ReviewPagination
 from src.modules.users.dependencies import UserServiceDep
 from src.modules.users.models import UserResponse, UserUpdate
 from src.modules.users.schemas import UserPagination, UserStats
+from src.modules.users.service import MAX_PROFILE_PHOTO_BYTES
 from src.modules.wishlists.schemas import WishlistPagination
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -31,6 +32,14 @@ async def update(service: UserServiceDep, data: UserUpdate, user: CurrentUserDep
 @router.get("/{username}", response_model=UserResponse)
 async def get_user(username: str, service: UserServiceDep):
     return await service.get_user(username)
+
+
+@router.post("/profile-photo", response_model=UserResponse)
+async def upload_profile_photo(
+    service: UserServiceDep, user: CurrentUserDep, file: Annotated[UploadFile, File()]
+):
+    content = await file.read(MAX_PROFILE_PHOTO_BYTES + 1)
+    return await service.update_profile_photo(user, content, file.content_type)
 
 
 @router.get("/{username}/stats", response_model=UserStats)

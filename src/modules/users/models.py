@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, computed_field
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
+from src.core.settings import settings
 from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ class User(UserBase, TimestampMixin, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str = Field(nullable=False)
+    profile_photo_key: str | None = Field(default=None)
 
     reviews: list["Review"] = Relationship(  # noqa: UP037
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
@@ -51,10 +53,17 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: uuid.UUID
+    profile_photo_key: str | None = Field(default=None, exclude=True)
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def profile_photo_url(self) -> str | None:
+        if not self.profile_photo_key:
+            return None
+        return f"{settings.CF_PUBLIC_URL.rstrip('/')}/{self.profile_photo_key}"
 
 
 class UserUpdate(ConfigBase):
     bio: str | None = None
-    

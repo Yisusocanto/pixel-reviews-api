@@ -19,6 +19,7 @@ class GameDetailRawgResponse(ConfigBase):
     description: str | None = None
     release_date: str | None = None
     image_url: str | None = None
+    background_image: str | None = None
     screenshots: list[str] = Field(default=list)
     developers: list[DeveloperCreate] = Field(default_factory=list)
     publishers: list[PublisherCreate] = Field(default_factory=list)

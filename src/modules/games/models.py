@@ -30,6 +30,7 @@ class GameBase(SQLModel):
     rawg_id: int = Field(index=True, unique=True)
     release_date: datetime
     image_url: str
+    background_image: str | None
     description: str
     screenshots: list[str] = Field(
         default_factory=list, sa_column=Column(ARRAY(String), nullable=False, server_default="{}")

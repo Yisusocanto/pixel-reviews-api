@@ -60,6 +60,7 @@ class GameService:
                 description=api_game.description,
                 release_date=api_game.release_date,
                 image_url=api_game.image_url,
+                background_image=api_game.background_image,
                 screenshots=api_game.screenshots,
             ),
             developers=developers,

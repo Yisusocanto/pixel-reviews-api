@@ -101,6 +101,7 @@ class RawgService:
             description=game_json.get("description_raw", ""),
             release_date=game_json.get("released"),
             image_url=game_json.get("background_image"),
+            background_image=game_json.get("background_image_additional"),
             screenshots=screenshots,
             developers=[
                 DeveloperCreate(

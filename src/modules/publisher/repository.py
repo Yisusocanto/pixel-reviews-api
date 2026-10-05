@@ -1,3 +1,6 @@
+import uuid
+
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,11 +12,17 @@ class PublisherRepository:
         self.session = session
 
     async def create(self, data: PublisherCreate) -> Publisher:
-        new_publisher = Publisher(**data.model_dump())
-        self.session.add(new_publisher)
-        await self.session.flush()
-        await self.session.refresh(new_publisher)
-        return new_publisher
+        # Atomic upsert: concurrent requests may try to insert the same RAWG entity.
+        stmt = (
+            pg_insert(Publisher)
+            .values(**data.model_dump(), id=uuid.uuid4())
+            .on_conflict_do_nothing()
+        )
+        await self.session.exec(stmt)
+        result = await self.session.exec(
+            select(Publisher).where(Publisher.rawg_id == data.rawg_id).execution_options(populate_existing=True)
+        )
+        return result.one()
 
     async def get_by_slug(self, slug: str) -> Publisher | None:
         stmt = select(Publisher).where(Publisher.slug == slug)

@@ -1,12 +1,13 @@
 import uuid
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.modules.developers.models import Developer
+from src.modules.developers.models import Developer, GameDeveloperLink
 from src.modules.games.models import Game, GameCreate
-from src.modules.publisher.models import Publisher
+from src.modules.publisher.models import GamePublisherLink, Publisher
 
 
 class GameRepository:
@@ -19,11 +20,31 @@ class GameRepository:
         developers: list[Developer],
         publishers: list[Publisher],
     ) -> Game:
-        new_game = Game(**data.model_dump(), developers=developers, publishers=publishers)
-        self.session.add(new_game)
-        await self.session.flush()
-        created_game = await self.get_by_slug(new_game.slug)
-        return created_game or new_game
+        # Atomic upsert: if a concurrent request already inserted this game, do nothing.
+        game_id = uuid.uuid4()
+        await self.session.exec(
+            pg_insert(Game).values(**data.model_dump(), id=game_id).on_conflict_do_nothing()
+        )
+        game = await self.get_by_rawg_id(data.rawg_id)
+        if game is None:
+            raise RuntimeError("Game was not found after upsert")
+
+        # Only the request that actually inserted the game links its developers/publishers.
+        if game.id == game_id:
+            if developers:
+                await self.session.exec(
+                    pg_insert(GameDeveloperLink)
+                    .values([{"game_id": game_id, "developer_id": d.id} for d in developers])
+                    .on_conflict_do_nothing()
+                )
+            if publishers:
+                await self.session.exec(
+                    pg_insert(GamePublisherLink)
+                    .values([{"game_id": game_id, "publisher_id": p.id} for p in publishers])
+                    .on_conflict_do_nothing()
+                )
+            await self.session.refresh(game, ["developers", "publishers"])
+        return game
 
     async def get_by_slug(self, game_slug: str) -> Game | None:
         stmt = (

@@ -1,3 +1,6 @@
+import uuid
+
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,11 +12,17 @@ class DeveloperRepository:
         self.session = session
 
     async def create(self, data: DeveloperCreate) -> Developer:
-        new_developer = Developer(**data.model_dump())
-        self.session.add(new_developer)
-        await self.session.flush()
-        await self.session.refresh(new_developer)
-        return new_developer
+        # Atomic upsert: concurrent requests may try to insert the same RAWG entity.
+        stmt = (
+            pg_insert(Developer)
+            .values(**data.model_dump(), id=uuid.uuid4())
+            .on_conflict_do_nothing()
+        )
+        await self.session.exec(stmt)
+        result = await self.session.exec(
+            select(Developer).where(Developer.rawg_id == data.rawg_id).execution_options(populate_existing=True)
+        )
+        return result.one()
 
     async def get_by_slug(self, slug: str) -> Developer | None:
         stmt = select(Developer).where(Developer.slug == slug)

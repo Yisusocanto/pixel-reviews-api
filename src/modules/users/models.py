@@ -11,6 +11,7 @@ from src.core.settings import settings
 from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
+    from src.modules.comments.models import Comment
     from src.modules.likes.models import Like
     from src.modules.reviews.models import Review
     from src.modules.wishlists.models import Wishlist
@@ -43,6 +44,9 @@ class User(UserBase, TimestampMixin, table=True):
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
     likes: list["Like"] = Relationship(  # noqa: UP037
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    comments: list["Comment"] = Relationship(  # noqa: UP037
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 

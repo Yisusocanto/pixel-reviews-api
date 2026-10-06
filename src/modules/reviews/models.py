@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from src.core.mixins import TimestampMixin
 
 if TYPE_CHECKING:
+    from src.modules.comments.models import Comment
     from src.modules.games.models import Game
     from src.modules.likes.models import Like
     from src.modules.users.models import User
@@ -39,6 +40,9 @@ class Review(ReviewBase, TimestampMixin, table=True):
         back_populates="reviews"
     )
     likes: list["Like"] = Relationship(  # noqa: UP037
+        back_populates="review", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    comments: list["Comment"] = Relationship(  # noqa: UP037
         back_populates="review", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 

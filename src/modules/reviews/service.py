@@ -37,12 +37,17 @@ class ReviewService:
     async def get_by_id_with_likes(
         self, review_id: uuid.UUID, current_user_id: uuid.UUID | None = None
     ) -> ReviewResponse:
-        result = await self.repo.get_by_id_with_likes(review_id, current_user_id)
+        result = await self.repo.get_by_id_with_counters(review_id, current_user_id)
         if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
-        review, count, is_liked = result
+        review, count, is_liked, comments_count = result
         return ReviewResponse.model_validate(
-            review, update={"likes_count": count, "liked_by_user": is_liked}
+            review,
+            update={
+                "likes_count": count,
+                "liked_by_user": is_liked,
+                "comments_count": comments_count,
+            },
         )
 
     async def get_by_id(self, review_id: uuid.UUID) -> Review:
@@ -57,9 +62,14 @@ class ReviewService:
         result = await self.repo.get_user_game_review(game.id, user_id)
         if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
-        review, count, is_liked = result
+        review, count, is_liked, comments_count = result
         return ReviewResponse.model_validate(
-            review, update={"likes_count": count, "liked_by_user": is_liked}
+            review,
+            update={
+                "likes_count": count,
+                "liked_by_user": is_liked,
+                "comments_count": comments_count,
+            },
         )
 
     async def get_all(
@@ -80,9 +90,14 @@ class ReviewService:
         )
         reviews = [
             ReviewResponse.model_validate(
-                review, update={"likes_count": count, "liked_by_user": is_liked}
+                review,
+                update={
+                    "likes_count": count,
+                    "liked_by_user": is_liked,
+                    "comments_count": comments_count,
+                },
             )
-            for review, count, is_liked in result
+            for review, count, is_liked, comments_count in result
         ]
         total = await self.repo.count_all(user_id=user_id, game_id=game_id)
         total_pages = (total - 1 + limit) // limit if total > 0 else 0

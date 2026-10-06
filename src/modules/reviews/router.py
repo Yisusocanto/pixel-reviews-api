@@ -4,6 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
+from src.modules.comments.dependencies import CommentServiceDep
+from src.modules.comments.schemas import CommentPagination
 from src.modules.likes.dependencies import LikeServiceDep
 from src.modules.likes.schema import LikeToggleResponse
 from src.modules.reviews.dependencies import ReviewServiceDep
@@ -71,3 +73,15 @@ async def toggle_like(
 ):
     liked, likes_count = await like_service.toggle(review_id=review_id, user_id=current_user.id)
     return LikeToggleResponse(liked=liked, likes_count=likes_count)
+
+
+@router.get("/{review_id}/comments", response_model=CommentPagination)
+async def get_review_comments(
+    service: ReviewServiceDep,
+    comments_service: CommentServiceDep,
+    review_id: uuid.UUID,
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1)] = 10,
+):
+    review = await service.get_by_id(review_id)
+    return await comments_service.get_all(page=page, limit=limit, review_id=review.id)

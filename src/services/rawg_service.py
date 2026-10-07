@@ -6,6 +6,7 @@ import httpx
 from src.core.settings import settings
 from src.modules.developers.models import DeveloperCreate
 from src.modules.publisher.models import PublisherCreate
+from src.modules.stores.models import StoreCreate
 from src.schemas.rawg_responses import GameDetailRawgResponse, GameSearchRawgResponse
 
 logger = logging.getLogger("rawg_service")
@@ -99,6 +100,9 @@ class RawgService:
             title=game_json.get("name") or game_json.get("title", ""),
             slug=canonical_slug,
             description=game_json.get("description_raw", ""),
+            metacritic_score=game_json.get("metacritic", None),
+            metacritic_url=game_json.get("metacritic_url", None),
+            website=game_json.get("website", None),
             release_date=game_json.get("released"),
             image_url=game_json.get("background_image"),
             background_image=game_json.get("background_image_additional"),
@@ -118,6 +122,15 @@ class RawgService:
                     slug=pub.get("slug"),
                 )
                 for pub in game_json.get("publishers", [])
+            ],
+            stores=[
+                StoreCreate(
+                    name=store["store"]["name"],
+                    slug=store["store"]["slug"],
+                    domain=store["store"]["domain"],
+                    url=store.get("url", None),
+                )
+                for store in game_json.get("stores", [])
             ],
         )
 

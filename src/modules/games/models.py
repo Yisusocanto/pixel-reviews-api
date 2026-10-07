@@ -9,11 +9,13 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from src.modules.developers.models import GameDeveloperLink
 from src.modules.publisher.models import GamePublisherLink
+from src.modules.stores.models import GameStoreLink
 
 if TYPE_CHECKING:
     from src.modules.developers.models import Developer
     from src.modules.publisher.models import Publisher
     from src.modules.reviews.models import Review
+    from src.modules.stores.models import Store
     from src.modules.wishlists.models import Wishlist
 
 
@@ -32,6 +34,9 @@ class GameBase(SQLModel):
     image_url: str
     background_image: str | None
     description: str
+    metacritic_score: int | None
+    metacritic_url: str | None
+    website: str | None
     screenshots: list[str] = Field(
         default_factory=list, sa_column=Column(ARRAY(String), nullable=False, server_default="{}")
     )
@@ -52,6 +57,9 @@ class Game(GameBase, table=True):
     wishlist: list["Wishlist"] = Relationship(  # noqa: UP037
         back_populates="game",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    stores: list["Store"] = Relationship(  # noqa: UP037
+        back_populates="games", link_model=GameStoreLink
     )
 
 

@@ -7,6 +7,7 @@ from src.modules.games.models import Game, GameCreate
 from src.modules.games.repository import GameRepository
 from src.modules.games.schemas import GamePagination, GameResponse
 from src.modules.publisher.service import PublisherService
+from src.modules.stores.service import StoreService
 from src.schemas.rawg_responses import GameSearchRawgResponse
 from src.services.rawg_service import RawgService, rawg_service
 
@@ -17,11 +18,13 @@ class GameService:
         repo: GameRepository,
         dev_service: DeveloperService,
         pub_service: PublisherService,
+        store_service: StoreService,
         rawg_client: RawgService = rawg_service,
     ) -> None:
         self.repo = repo
         self.dev_service = dev_service
         self.pub_service = pub_service
+        self.store_service = store_service
         self.rawg_client = rawg_client
 
     async def search_games(self, game_title: str) -> list[GameSearchRawgResponse]:
@@ -51,6 +54,7 @@ class GameService:
             await self.dev_service.find_or_create(developer) for developer in api_game.developers
         ]
         publishers = [await self.pub_service.find_or_create(pub) for pub in api_game.publishers]
+        stores = [await self.store_service.create_or_find(store) for store in api_game.stores]
 
         new_game = await self.repo.create(
             GameCreate(
@@ -58,6 +62,9 @@ class GameService:
                 slug=api_game.slug,
                 rawg_id=api_game.rawg_id,
                 description=api_game.description,
+                metacritic_score=api_game.metacritic_score,
+                metacritic_url=api_game.metacritic_url,
+                website=api_game.website,
                 release_date=api_game.release_date,
                 image_url=api_game.image_url,
                 background_image=api_game.background_image,
@@ -65,6 +72,7 @@ class GameService:
             ),
             developers=developers,
             publishers=publishers,
+            stores=stores,
         )
         return new_game
 

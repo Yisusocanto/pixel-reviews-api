@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.modules.developers.models import Developer, GameDeveloperLink
 from src.modules.games.models import Game, GameCreate
 from src.modules.publisher.models import GamePublisherLink, Publisher
+from src.modules.stores.models import GameStoreLink, Store
 
 
 class GameRepository:
@@ -19,6 +20,7 @@ class GameRepository:
         data: GameCreate,
         developers: list[Developer],
         publishers: list[Publisher],
+        stores: list[Store],
     ) -> Game:
         # Atomic upsert: if a concurrent request already inserted this game, do nothing.
         game_id = uuid.uuid4()
@@ -29,7 +31,7 @@ class GameRepository:
         if game is None:
             raise RuntimeError("Game was not found after upsert")
 
-        # Only the request that actually inserted the game links its developers/publishers.
+        # Only the request that actually inserted the game links its developers/publishers/stores.
         if game.id == game_id:
             if developers:
                 await self.session.exec(
@@ -43,14 +45,25 @@ class GameRepository:
                     .values([{"game_id": game_id, "publisher_id": p.id} for p in publishers])
                     .on_conflict_do_nothing()
                 )
-            await self.session.refresh(game, ["developers", "publishers"])
+            if stores:
+                await self.session.exec(
+                    pg_insert(GameStoreLink).values(
+                        [{"game_id": game_id, "store_id": s.id} for s in stores]
+                    )
+                )
+
+            await self.session.refresh(game, ["developers", "publishers", "stores"])
         return game
 
     async def get_by_slug(self, game_slug: str) -> Game | None:
         stmt = (
             select(Game)
             .where(Game.slug == game_slug)
-            .options(selectinload(Game.developers), selectinload(Game.publishers))
+            .options(
+                selectinload(Game.developers),
+                selectinload(Game.publishers),
+                selectinload(Game.stores),
+            )
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -59,7 +72,11 @@ class GameRepository:
         stmt = (
             select(Game)
             .where(Game.rawg_id == rawg_id)
-            .options(selectinload(Game.developers), selectinload(Game.publishers))
+            .options(
+                selectinload(Game.developers),
+                selectinload(Game.publishers),
+                selectinload(Game.stores),
+            )
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -73,7 +90,11 @@ class GameRepository:
             select(Game)
             .offset(offset)
             .limit(limit)
-            .options(selectinload(Game.developers), selectinload(Game.publishers))
+            .options(
+                selectinload(Game.developers),
+                selectinload(Game.publishers),
+                selectinload(Game.stores),
+            )
         )
         result = await self.session.exec(stmt)
         return result.all()

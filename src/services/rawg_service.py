@@ -5,6 +5,7 @@ import httpx
 
 from src.core.settings import settings
 from src.modules.developers.models import DeveloperCreate
+from src.modules.genres.models import GenreCreate
 from src.modules.publisher.models import PublisherCreate
 from src.modules.stores.models import StoreCreate
 from src.schemas.rawg_responses import GameDetailRawgResponse, GameSearchRawgResponse
@@ -131,6 +132,13 @@ class RawgService:
                     url=store.get("url", None),
                 )
                 for store in game_json.get("stores", [])
+            ],
+            genres=[
+                GenreCreate(
+                    name=genre.get("name"),
+                    slug=genre.get("slug"),
+                )
+                for genre in game_json.get("genres", [])
             ],
         )
 

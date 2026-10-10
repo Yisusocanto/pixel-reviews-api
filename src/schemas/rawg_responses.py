@@ -1,6 +1,7 @@
 from pydantic import Field
 
 from src.modules.developers.models import DeveloperCreate
+from src.modules.genres.models import GenreCreate
 from src.modules.publisher.models import PublisherCreate
 from src.modules.stores.models import StoreCreate
 from src.schemas.config_base import ConfigBase
@@ -28,3 +29,4 @@ class GameDetailRawgResponse(ConfigBase):
     developers: list[DeveloperCreate] = Field(default_factory=list)
     publishers: list[PublisherCreate] = Field(default_factory=list)
     stores: list[StoreCreate] = Field(default_factory=list)
+    genres: list[GenreCreate] = Field(default_factory=list)

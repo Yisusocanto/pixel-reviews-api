@@ -7,6 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.developers.models import Developer, GameDeveloperLink
 from src.modules.games.models import Game, GameCreate
+from src.modules.genres.models import GameGenreLink, Genre
 from src.modules.publisher.models import GamePublisherLink, Publisher
 from src.modules.stores.models import GameStoreLink, Store
 
@@ -21,6 +22,7 @@ class GameRepository:
         developers: list[Developer],
         publishers: list[Publisher],
         stores: list[Store],
+        genres: list[Genre],
     ) -> Game:
         # Atomic upsert: if a concurrent request already inserted this game, do nothing.
         game_id = uuid.uuid4()
@@ -51,6 +53,12 @@ class GameRepository:
                         [{"game_id": game_id, "store_id": s.id} for s in stores]
                     )
                 )
+            if genres:
+                await self.session.exec(
+                    pg_insert(GameGenreLink).values(
+                        [{"game_id": game_id, "genre_id": g.id} for g in genres]
+                    )
+                )
 
             await self.session.refresh(game, ["developers", "publishers", "stores"])
         return game
@@ -63,6 +71,7 @@ class GameRepository:
                 selectinload(Game.developers),
                 selectinload(Game.publishers),
                 selectinload(Game.stores),
+                selectinload(Game.genres),
             )
         )
         result = await self.session.exec(stmt)
@@ -76,6 +85,7 @@ class GameRepository:
                 selectinload(Game.developers),
                 selectinload(Game.publishers),
                 selectinload(Game.stores),
+                selectinload(Game.genres),
             )
         )
         result = await self.session.exec(stmt)
@@ -94,6 +104,7 @@ class GameRepository:
                 selectinload(Game.developers),
                 selectinload(Game.publishers),
                 selectinload(Game.stores),
+                selectinload(Game.genres),
             )
         )
         result = await self.session.exec(stmt)

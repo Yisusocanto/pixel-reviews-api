@@ -9,12 +9,14 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from src.modules.developers.models import GameDeveloperLink
 from src.modules.genres.models import GameGenreLink
+from src.modules.platforms.models import GamePlatformLink
 from src.modules.publisher.models import GamePublisherLink
 from src.modules.stores.models import GameStoreLink
 
 if TYPE_CHECKING:
     from src.modules.developers.models import Developer
     from src.modules.genres.models import Genre
+    from src.modules.platforms.models import Platform
     from src.modules.publisher.models import Publisher
     from src.modules.reviews.models import Review
     from src.modules.stores.models import Store
@@ -65,6 +67,9 @@ class Game(GameBase, table=True):
     )
     genres: list["Genre"] = Relationship(  # noqa: UP037
         back_populates="games", link_model=GameGenreLink
+    )
+    platforms: list["Platform"] = Relationship(  # noqa: UP037
+        back_populates="games", link_model=GamePlatformLink
     )
 
 

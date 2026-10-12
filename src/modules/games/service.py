@@ -7,6 +7,7 @@ from src.modules.games.models import Game, GameCreate
 from src.modules.games.repository import GameRepository
 from src.modules.games.schemas import GamePagination, GameResponse
 from src.modules.genres.service import GenreService
+from src.modules.platforms.service import PlatformService
 from src.modules.publisher.service import PublisherService
 from src.modules.stores.service import StoreService
 from src.schemas.rawg_responses import GameSearchRawgResponse
@@ -21,6 +22,7 @@ class GameService:
         pub_service: PublisherService,
         store_service: StoreService,
         genre_service: GenreService,
+        platform_service: PlatformService,
         rawg_client: RawgService = rawg_service,
     ) -> None:
         self.repo = repo
@@ -28,6 +30,7 @@ class GameService:
         self.pub_service = pub_service
         self.store_service = store_service
         self.genre_service = genre_service
+        self.platform_service = platform_service
         self.rawg_client = rawg_client
 
     async def search_games(self, game_title: str) -> list[GameSearchRawgResponse]:
@@ -59,6 +62,9 @@ class GameService:
         publishers = [await self.pub_service.find_or_create(pub) for pub in api_game.publishers]
         stores = [await self.store_service.create_or_find(store) for store in api_game.stores]
         genres = [await self.genre_service.find_or_create(genre) for genre in api_game.genres]
+        platforms = [
+            await self.platform_service.find_or_create(platform) for platform in api_game.platforms
+        ]
 
         new_game = await self.repo.create(
             GameCreate(
@@ -78,6 +84,7 @@ class GameService:
             publishers=publishers,
             stores=stores,
             genres=genres,
+            platforms=platforms,
         )
         return new_game
 

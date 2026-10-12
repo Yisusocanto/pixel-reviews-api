@@ -7,6 +7,7 @@ from src.modules.developers.dependencies import DeveloperServiceDep
 from src.modules.games.repository import GameRepository
 from src.modules.games.service import GameService
 from src.modules.genres.dependencies import GenreServiceDep
+from src.modules.platforms.dependencies import PlatformServiceDep
 from src.modules.publisher.dependencies import PublisherServiceDep
 from src.modules.stores.dependencies import StoreServiceDep
 
@@ -24,6 +25,7 @@ def get_game_service(
     pub_service: PublisherServiceDep,
     store_service: StoreServiceDep,
     genre_service: GenreServiceDep,
+    platform_service: PlatformServiceDep,
 ) -> GameService:
     return GameService(
         repo=repo,
@@ -31,6 +33,7 @@ def get_game_service(
         pub_service=pub_service,
         store_service=store_service,
         genre_service=genre_service,
+        platform_service=platform_service,
     )
 
 

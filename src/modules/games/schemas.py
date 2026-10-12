@@ -3,6 +3,7 @@ import uuid
 from src.modules.developers.models import Developer
 from src.modules.games.models import GameBase
 from src.modules.genres.models import Genre
+from src.modules.platforms.models import Platform
 from src.modules.publisher.models import Publisher
 from src.modules.stores.models import Store
 from src.schemas.config_base import ConfigBase
@@ -15,6 +16,7 @@ class GameResponse(GameBase):
     publishers: list[Publisher]
     stores: list[Store]
     genres: list[Genre]
+    platforms: list[Platform]
 
 
 class GamePagination(Pagination):

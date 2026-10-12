@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.modules.developers.models import Developer, GameDeveloperLink
 from src.modules.games.models import Game, GameCreate
 from src.modules.genres.models import GameGenreLink, Genre
+from src.modules.platforms.models import GamePlatformLink, Platform
 from src.modules.publisher.models import GamePublisherLink, Publisher
 from src.modules.stores.models import GameStoreLink, Store
 
@@ -23,6 +24,7 @@ class GameRepository:
         publishers: list[Publisher],
         stores: list[Store],
         genres: list[Genre],
+        platforms: list[Platform],
     ) -> Game:
         # Atomic upsert: if a concurrent request already inserted this game, do nothing.
         game_id = uuid.uuid4()
@@ -59,6 +61,12 @@ class GameRepository:
                         [{"game_id": game_id, "genre_id": g.id} for g in genres]
                     )
                 )
+            if platforms:
+                await self.session.exec(
+                    pg_insert(GamePlatformLink).values(
+                        [{"game_id": game_id, "platform_id": p.id} for p in platforms]
+                    )
+                )
 
             await self.session.refresh(game, ["developers", "publishers", "stores"])
         return game
@@ -72,6 +80,7 @@ class GameRepository:
                 selectinload(Game.publishers),
                 selectinload(Game.stores),
                 selectinload(Game.genres),
+                selectinload(Game.platforms),
             )
         )
         result = await self.session.exec(stmt)
@@ -86,6 +95,7 @@ class GameRepository:
                 selectinload(Game.publishers),
                 selectinload(Game.stores),
                 selectinload(Game.genres),
+                selectinload(Game.platforms),
             )
         )
         result = await self.session.exec(stmt)
@@ -105,6 +115,7 @@ class GameRepository:
                 selectinload(Game.publishers),
                 selectinload(Game.stores),
                 selectinload(Game.genres),
+                selectinload(Game.platforms),
             )
         )
         result = await self.session.exec(stmt)

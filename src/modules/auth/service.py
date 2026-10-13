@@ -1,8 +1,10 @@
 import uuid
 
 from fastapi import HTTPException, status
+from starlette.concurrency import run_in_threadpool
 
 from src.lib.password_handler import check_password
+from src.modules.auth.google import verify_google_id_token
 from src.modules.auth.models import AuthResponse, LoginRequest, TokenResponse
 from src.modules.auth.security import (
     TOKEN_TYPE_REFRESH,
@@ -20,10 +22,7 @@ class AuthService:
         self.user_repo = user_repo
         self.user_service = user_service
 
-    async def register(self, data: UserCreate) -> AuthResponse:
-        """Registers a new user and immediately authenticates them with access and refresh tokens."""
-        user = await self.user_service.create(data)
-
+    def _issue_tokens(self, user: User) -> AuthResponse:
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
 
@@ -34,14 +33,17 @@ class AuthService:
             user=UserResponse.model_validate(user),
         )
 
+    async def register(self, data: UserCreate) -> AuthResponse:
+        user = await self.user_service.create(data)
+        return self._issue_tokens(user)
+
     async def authenticate_user(
         self,
         email: str,
         password: str,
     ) -> User:
-        """Verifies credentials and returns user if valid."""
         user = await self.user_repo.get_by_email(email)
-        if not user:
+        if not user or not user.hashed_password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
@@ -59,18 +61,28 @@ class AuthService:
         return user
 
     async def login(self, data: LoginRequest) -> AuthResponse:
-        """Authenticates user and issues access and refresh tokens along with user info."""
         user = await self.authenticate_user(data.email, data.password)
+        return self._issue_tokens(user)
 
-        access_token = create_access_token(user.id)
-        refresh_token = create_refresh_token(user.id)
+    async def login_with_google(self, id_token: str) -> AuthResponse:
+        payload = await run_in_threadpool(verify_google_id_token, id_token)
+        google_id: str = payload["sub"]
+        email: str = payload["email"]
+        name: str | None = payload.get("name")
 
-        return AuthResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            user=UserResponse.model_validate(user),
-        )
+        user = await self.user_repo.get_by_google_id(google_id)
+        if not user:
+            user = await self.user_repo.get_by_email(email)
+            if user:
+                user = await self.user_repo.link_google_id(user, google_id)
+            else:
+                user = await self.user_service.create_from_google(
+                    email=email,
+                    google_id=google_id,
+                    name=name,
+                )
+
+        return self._issue_tokens(user)
 
     async def refresh_tokens(
         self,

@@ -24,4 +24,3 @@ class StoreRepository:
         stmt = select(Store).where(Store.slug == slug)
         result = await self.session.exec(stmt)
         return result.first()
-

@@ -34,7 +34,8 @@ class User(UserBase, TimestampMixin, table=True):
     __tablename__ = "users"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str = Field(nullable=False)
+    hashed_password: str | None = Field(default=None, nullable=True)
+    google_id: str | None = Field(default=None, unique=True, index=True)
     profile_photo_key: str | None = Field(default=None)
 
     reviews: list["Review"] = Relationship(  # noqa: UP037

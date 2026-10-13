@@ -20,7 +20,9 @@ class DeveloperRepository:
         )
         await self.session.exec(stmt)
         result = await self.session.exec(
-            select(Developer).where(Developer.rawg_id == data.rawg_id).execution_options(populate_existing=True)
+            select(Developer)
+            .where(Developer.rawg_id == data.rawg_id)
+            .execution_options(populate_existing=True)
         )
         return result.one()
 

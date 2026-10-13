@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    GOOGLE_CLIENT_ID: str = ""
+
     # Cloudflare R2
     CF_ACCOUNT_ID: str
     CF_BUCKET: str

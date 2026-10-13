@@ -20,7 +20,9 @@ class PublisherRepository:
         )
         await self.session.exec(stmt)
         result = await self.session.exec(
-            select(Publisher).where(Publisher.rawg_id == data.rawg_id).execution_options(populate_existing=True)
+            select(Publisher)
+            .where(Publisher.rawg_id == data.rawg_id)
+            .execution_options(populate_existing=True)
         )
         return result.one()
 

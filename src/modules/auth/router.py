@@ -1,7 +1,13 @@
 from fastapi import APIRouter, status
 
 from src.modules.auth.dependencies import AuthServiceDep, CurrentUserDep
-from src.modules.auth.models import AuthResponse, LoginRequest, RefreshTokenRequest, TokenResponse
+from src.modules.auth.models import (
+    AuthResponse,
+    GoogleLoginRequest,
+    LoginRequest,
+    RefreshTokenRequest,
+    TokenResponse,
+)
 from src.modules.users.models import User, UserCreate, UserResponse
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -30,6 +36,18 @@ async def login(
     service: AuthServiceDep,
 ) -> AuthResponse:
     return await service.login(login_data)
+
+
+@auth_router.post(
+    "/google",
+    response_model=AuthResponse,
+    summary="Authenticate with Google ID token",
+)
+async def google_login(
+    data: GoogleLoginRequest,
+    service: AuthServiceDep,
+) -> AuthResponse:
+    return await service.login_with_google(data.id_token)
 
 
 @auth_router.post(

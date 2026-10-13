@@ -30,6 +30,18 @@ class UserRepository:
         result = await self.session.exec(consulta)
         return result.first()
 
+    async def get_by_google_id(self, google_id: str) -> User | None:
+        consulta = select(User).where(User.google_id == google_id)
+        result = await self.session.exec(consulta)
+        return result.first()
+
+    async def link_google_id(self, user: User, google_id: str) -> User:
+        user.google_id = google_id
+        self.session.add(user)
+        await self.session.flush()
+        await self.session.refresh(user)
+        return user
+
     async def get_all(self, offset: int, limit: int) -> Sequence[User]:
         stmt = select(User).offset(offset).limit(limit)
         result = await self.session.exec(stmt)

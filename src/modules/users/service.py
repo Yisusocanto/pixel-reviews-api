@@ -1,4 +1,6 @@
 import logging
+import re
+import secrets
 import uuid
 
 from fastapi import HTTPException, status
@@ -54,6 +56,30 @@ class UserService:
             username=data.username,
             bio=data.bio,
             hashed_password=hashed_password,
+        )
+
+        return await self.repo.create(new_user)
+
+    async def create_from_google(self, email: str, google_id: str, name: str | None = None) -> User:
+        base_username = ""
+        if name:
+            base_username = re.sub(r"[^a-zA-Z0-9_]", "_", name.strip().lower())
+        if not base_username:
+            email_prefix = email.split("@")[0]
+            base_username = re.sub(r"[^a-zA-Z0-9_]", "_", email_prefix.lower())
+
+        base_username = base_username[:20].strip("_") or "user"
+        username = base_username
+
+        while await self.repo.get_by_username(username):
+            suffix = secrets.token_hex(2)
+            username = f"{base_username[:15]}_{suffix}"
+
+        new_user = User(
+            email=email,
+            username=username,
+            google_id=google_id,
+            hashed_password=None,
         )
 
         return await self.repo.create(new_user)

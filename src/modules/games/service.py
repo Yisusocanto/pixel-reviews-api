@@ -10,7 +10,7 @@ from src.modules.genres.service import GenreService
 from src.modules.platforms.service import PlatformService
 from src.modules.publisher.service import PublisherService
 from src.modules.stores.service import StoreService
-from src.schemas.rawg_responses import GameSearchRawgResponse
+from src.schemas.rawg_responses import GameSearchPagination
 from src.services.rawg_service import RawgService, rawg_service
 
 
@@ -33,10 +33,15 @@ class GameService:
         self.platform_service = platform_service
         self.rawg_client = rawg_client
 
-    async def search_games(self, game_title: str) -> list[GameSearchRawgResponse]:
-        games = await self.rawg_client.search_games(game_title, 20)
-        if not games:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Games not found")
+    async def search_games(
+        self, game_title: str = "", page: int = 1, limit: int = 20
+    ) -> GameSearchPagination:
+        games = await self.rawg_client.search_games(game_title=game_title, page=page, limit=limit)
+        if games is None:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Error fetching games from external service",
+            )
 
         return games
 

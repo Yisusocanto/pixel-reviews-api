@@ -6,6 +6,7 @@ from src.modules.platforms.models import PlatformCreate
 from src.modules.publisher.models import PublisherCreate
 from src.modules.stores.models import StoreCreate
 from src.schemas.config_base import ConfigBase
+from src.schemas.pagination import Pagination
 
 
 class GameSearchRawgResponse(ConfigBase):
@@ -13,6 +14,10 @@ class GameSearchRawgResponse(ConfigBase):
     slug: str
     release_date: str | None = None
     background_image: str | None = None
+
+
+class GameSearchPagination(Pagination):
+    items: list[GameSearchRawgResponse]
 
 
 class GameDetailRawgResponse(ConfigBase):

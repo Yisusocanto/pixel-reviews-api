@@ -9,7 +9,11 @@ from src.modules.genres.models import GenreCreate
 from src.modules.platforms.models import PlatformCreate
 from src.modules.publisher.models import PublisherCreate
 from src.modules.stores.models import StoreCreate
-from src.schemas.rawg_responses import GameDetailRawgResponse, GameSearchRawgResponse
+from src.schemas.rawg_responses import (
+    GameDetailRawgResponse,
+    GameSearchPagination,
+    GameSearchRawgResponse,
+)
 
 logger = logging.getLogger("rawg_service")
 
@@ -52,17 +56,29 @@ class RawgService:
             return None
 
     async def search_games(
-        self, game_title: str, limit: int
-    ) -> list[GameSearchRawgResponse] | None:
+        self, game_title: str = "", page: int = 1, limit: int = 20
+    ) -> GameSearchPagination | None:
+        params: dict[str, Any] = {
+            "page": page,
+            "page_size": limit,
+        }
+        stripped = game_title.strip()
+        if stripped:
+            params["search"] = stripped
+
         response = await self._get(
             "/games",
-            params={"search": game_title, "page_size": limit},
+            params=params,
         )
         if not response:
+            if page > 1:
+                return GameSearchPagination(items=[], total=0, total_pages=0, page=page)
             return None
 
         games_json = response.json()
         results = games_json.get("results", [])
+        total = games_json.get("count", 0)
+        total_pages = (total - 1 + limit) // limit if total > 0 else 0
 
         games = [
             GameSearchRawgResponse(
@@ -74,8 +90,19 @@ class RawgService:
             for game in results
         ]
 
-        logger.debug("[RAWG] search '%s' -> %d results", game_title, len(games))
-        return games
+        logger.debug(
+            "[RAWG] search '%s' page %d -> %d results (total: %d)",
+            game_title,
+            page,
+            len(games),
+            total,
+        )
+        return GameSearchPagination(
+            items=games,
+            total=total,
+            total_pages=total_pages,
+            page=page,
+        )
 
     async def get_game_details(self, game_slug: str) -> GameDetailRawgResponse | None:
         response = await self._get(f"/games/{game_slug}")

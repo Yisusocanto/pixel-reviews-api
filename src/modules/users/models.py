@@ -27,7 +27,7 @@ class UserBase(SQLModel):
 
     email: str = Field(unique=True, index=True)
     username: str = Field(unique=True, index=True)
-    bio: str | None = Field(default=None)
+    bio: str | None = Field(default=None, max_length=1000)
 
 
 class User(UserBase, TimestampMixin, table=True):
@@ -71,4 +71,5 @@ class UserResponse(UserBase):
 
 
 class UserUpdate(ConfigBase):
-    bio: str | None = None
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    bio: str | None = Field(default=None, max_length=1000)

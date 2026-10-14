@@ -91,6 +91,14 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
+        if data.username:
+            already_in_use = await self.repo.get_by_username(data.username)
+            if already_in_use:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Username already in use. choose another"
+                )
+
         updated_user = await self.repo.update(user, data)
         return updated_user
 

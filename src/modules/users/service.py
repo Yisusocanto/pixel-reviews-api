@@ -6,7 +6,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.lib.password_handler import hash_password
+from src.lib.password_handler import check_password, hash_password
 from src.modules.reviews.service import ReviewService
 from src.modules.users.models import User, UserCreate, UserUpdate
 from src.modules.users.repository import UserRepository
@@ -96,10 +96,26 @@ class UserService:
             if already_in_use:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Username already in use. choose another"
+                    detail="Username already in use. choose another",
                 )
 
         updated_user = await self.repo.update(user, data)
+        return updated_user
+
+    async def update_password(self, user: User, old_password: str, new_password: str) -> User:
+        if not await check_password(old_password, user.hashed_password or ""):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Old password incorrect"
+            )
+
+        if len(new_password) < 4 or len(new_password) > 50:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Too short or too long password (4 - 50 characters)",
+            )
+
+        new_hashed_password = await hash_password(new_password)
+        updated_user = await self.repo.update_password(user, new_hashed_password)
         return updated_user
 
     async def get_all(self, page: int, limit: int) -> UserPagination:

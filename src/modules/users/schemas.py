@@ -16,3 +16,8 @@ class UserReviewStats(ConfigBase):
 
 class UserStats(UserReviewStats):
     total_likes: int
+
+
+class UpdatePasswordRequest(ConfigBase):
+    old_password: str
+    new_password: str

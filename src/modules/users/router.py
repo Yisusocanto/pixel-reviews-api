@@ -8,7 +8,7 @@ from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
 from src.modules.users.dependencies import UserServiceDep
 from src.modules.users.models import UserResponse, UserUpdate
-from src.modules.users.schemas import UserPagination, UserStats
+from src.modules.users.schemas import UpdatePasswordRequest, UserPagination, UserStats
 from src.modules.users.service import MAX_PROFILE_PHOTO_BYTES
 from src.modules.wishlists.schemas import WishlistPagination
 
@@ -27,6 +27,13 @@ async def get_all(
 @router.patch("", response_model=UserResponse)
 async def update(service: UserServiceDep, data: UserUpdate, user: CurrentUserDep):
     return await service.update(data, user.id)
+
+
+@router.patch("/update-password", response_model=UserResponse)
+async def update_password(
+    service: UserServiceDep, data: UpdatePasswordRequest, user: CurrentUserDep
+):
+    return await service.update_password(user, data.old_password, data.new_password)
 
 
 @router.get("/{username}", response_model=UserResponse)

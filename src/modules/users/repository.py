@@ -61,6 +61,13 @@ class UserRepository:
         await self.session.refresh(user)
         return user
 
+    async def update_password(self, user: User, new_password: str) -> User:
+        user.hashed_password = new_password
+        self.session.add(user)
+        await self.session.flush()
+        await self.session.refresh(user)
+        return user
+
     async def set_profile_photo_key(self, user: User, key: str) -> User:
         user.profile_photo_key = key
         self.session.add(user)

@@ -8,6 +8,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
 from src.core.settings import settings
+from src.modules.password_reset_tokens.models import PasswordResetToken
 from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
@@ -48,6 +49,9 @@ class User(UserBase, TimestampMixin, table=True):
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
     comments: list["Comment"] = Relationship(  # noqa: UP037
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    password_reset_tokens: "PasswordResetToken" = Relationship(  # noqa: UP037
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 

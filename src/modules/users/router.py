@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Query, UploadFile
 
 from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
 from src.modules.likes.dependencies import LikeServiceDep
@@ -8,7 +8,13 @@ from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
 from src.modules.users.dependencies import UserServiceDep
 from src.modules.users.models import UserResponse, UserUpdate
-from src.modules.users.schemas import UpdatePasswordRequest, UserPagination, UserStats
+from src.modules.users.schemas import (
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    UpdatePasswordRequest,
+    UserPagination,
+    UserStats,
+)
 from src.modules.users.service import MAX_PROFILE_PHOTO_BYTES
 from src.modules.wishlists.schemas import WishlistPagination
 
@@ -34,6 +40,18 @@ async def update_password(
     service: UserServiceDep, data: UpdatePasswordRequest, user: CurrentUserDep
 ):
     return await service.update_password(user, data.old_password, data.new_password)
+
+
+@router.post("/forgot-password", response_model=dict[str, str])
+async def forgot_password(
+    service: UserServiceDep, data: ForgotPasswordRequest, bg_tasks: BackgroundTasks
+):
+    return await service.forgot_password(data.email, bg_tasks)
+
+
+@router.post("/reset-password", response_model=dict[str, str])
+async def reset_password(service: UserServiceDep, data: ResetPasswordRequest):
+    return await service.reset_password(data.token, data.new_password)
 
 
 @router.get("/{username}", response_model=UserResponse)

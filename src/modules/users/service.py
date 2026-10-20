@@ -1,18 +1,25 @@
+import hashlib
 import logging
 import re
 import secrets
 import uuid
+from datetime import UTC, datetime, timedelta
+from urllib.parse import urlencode
 
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 
+from src.core.settings import settings
 from src.lib.password_handler import check_password, hash_password
+from src.modules.password_reset_tokens.models import PasswordResetTokenCreate
+from src.modules.password_reset_tokens.service import PasswordResetTokenService
 from src.modules.reviews.service import ReviewService
 from src.modules.users.models import User, UserCreate, UserUpdate
 from src.modules.users.repository import UserRepository
 from src.modules.users.schemas import UserPagination
 from src.modules.wishlists.schemas import WishlistPagination
 from src.modules.wishlists.service import WishlistService
+from src.services.mailer.client import MailerService
 from src.services.storage_service import StorageError, StorageService
 
 logger = logging.getLogger("user_service")
@@ -28,12 +35,16 @@ class UserService:
         repo: UserRepository,
         review_service: ReviewService,
         wishlist_service: WishlistService,
+        password_reset_token_service: PasswordResetTokenService,
         storage: StorageService,
+        mailer: MailerService,
     ) -> None:
         self.repo = repo
         self.review_service = review_service
         self.wishlist_service = wishlist_service
+        self.password_reset_token_service = password_reset_token_service
         self.storage = storage
+        self.mailer = mailer
 
     async def create(self, data: UserCreate) -> User:
         existing_username = await self.repo.get_by_username(data.username)
@@ -190,6 +201,60 @@ class UserService:
 
         logger.info("[USERS] User %s changed profile photo to %s", user.id, new_key)
         return updated_user
+
+    async def forgot_password(self, email: str, bg_tasks: BackgroundTasks):
+        response = {"message": "Check your inbox to reset your password."}
+
+        user = await self.repo.get_by_email(email)
+        if not user:
+            return response
+
+        await self.password_reset_token_service.delete_all(user.id)
+
+        token = secrets.token_urlsafe(16)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        expires_at = datetime.now(UTC) + timedelta(minutes=15)
+
+        base_url = settings.FRONTEND_URL + "/reset-password"
+        query_params = urlencode({"token": token})
+        reset_url = base_url + "?" + query_params
+
+        await self.password_reset_token_service.create(
+            PasswordResetTokenCreate(user_id=user.id, token_hash=token_hash, expires_at=expires_at)
+        )
+
+        bg_tasks.add_task(
+            self.mailer.send_forgot_password_email,
+            email=user.email,
+            username=user.username,
+            reset_url=reset_url,
+        )
+
+        return response
+
+    async def reset_password(self, token: str, new_password: str):
+        exception = HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="The link is invalid or has expired"
+        )
+
+        hashed_token = hashlib.sha256(token.encode()).hexdigest()
+
+        db_token = await self.password_reset_token_service.get_one(hashed_token)
+        if not db_token:
+            raise exception
+
+        if datetime.now(UTC) > db_token.expires_at:
+            raise exception
+
+        user = await self.repo.get_user(db_token.user_id)
+        if not user:
+            raise exception
+
+        hashed_new_password = await hash_password(new_password)
+        await self.repo.update_password(user=user, new_password=hashed_new_password)
+        await self.password_reset_token_service.delete_all(user.id)
+
+        return {"message": "Password successfully reset"}
 
     async def _delete_photo_quietly(self, key: str) -> None:
         try:

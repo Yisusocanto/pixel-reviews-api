@@ -6,6 +6,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = ""
     API_RAWG_KEY: str = ""
+    BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # JWT Auth Settings
     JWT_SECRET_KEY: str = "supersecret_jwt_key_change_me_in_production"
@@ -14,6 +16,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     GOOGLE_CLIENT_ID: str = ""
+    RESEND_API_KEY: str = ""
+    RESEND_DOMAIN: str = "onboarding@resend.dev"
 
     # Cloudflare R2
     CF_ACCOUNT_ID: str

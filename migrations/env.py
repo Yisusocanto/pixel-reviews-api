@@ -13,6 +13,7 @@ from src.modules.developers.models import Developer  # noqa: F401
 from src.modules.games.models import Game  # noqa: F401
 from src.modules.genres.models import Genre  # noqa: F401
 from src.modules.likes.models import Like  # noqa: F401
+from src.modules.password_reset_tokens.models import PasswordResetToken  # noqa: F401
 from src.modules.platforms.models import Platform  # noqa: F401
 from src.modules.publisher.models import Publisher  # noqa: F401
 from src.modules.reviews.models import Review  # noqa: F401

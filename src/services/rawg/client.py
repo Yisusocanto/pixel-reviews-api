@@ -18,9 +18,15 @@ logger = logging.getLogger("rawg_service")
 
 
 class RawgService:
-    def __init__(self, api_url: str, api_key: str):
+    def __init__(
+        self,
+        api_url: str,
+        api_key: str,
+        http_client: httpx.AsyncClient | None = None,
+    ):
         self.api_url = api_url
         self.api_key = api_key
+        self.http_client = http_client
 
     async def _get(
         self, endpoint: str, params: dict[str, Any] | None = None
@@ -34,8 +40,12 @@ class RawgService:
         logger.info("[RAWG] GET %s | Params: %s", endpoint, safe_params)
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{self.api_url}{endpoint}", params=query_params)
+            url = f"{self.api_url}{endpoint}"
+            if self.http_client is not None:
+                response = await self.http_client.get(url, params=query_params)
+            else:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(url, params=query_params)
 
             if response.is_error:
                 logger.error(

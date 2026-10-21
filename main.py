@@ -1,11 +1,14 @@
 import logging
+from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from src.core.settings import settings
+from src.db.database import engine
 from src.lib.limiter import limiter
 from src.modules.auth.router import auth_router
 from src.modules.comments.router import router as comments_router
@@ -21,10 +24,20 @@ if settings.ENVIRONMENT == "development":
         datefmt="%H:%M:%S",
     )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with httpx.AsyncClient(timeout=10.0) as http_client:
+        app.state.http_client = http_client
+        yield
+    await engine.dispose()
+
+
 app = FastAPI(
     title="Pixel Reviews API",
     description="API for Pixel Reviews",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter

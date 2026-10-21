@@ -1,8 +1,12 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from src.core.settings import settings
+from src.lib.limiter import limiter
 from src.modules.auth.router import auth_router
 from src.modules.comments.router import router as comments_router
 from src.modules.games.router import router as games_router
@@ -19,8 +23,20 @@ if settings.ENVIRONMENT == "development":
 
 app = FastAPI(
     title="Pixel Reviews API",
-    description="API for Pixel Reviews with JWT Authentication & Refresh Token",
+    description="API for Pixel Reviews",
     version="0.1.0",
+)
+
+app.state.limiter = limiter
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "DELETE", "PATCH", "PUT", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(auth_router)

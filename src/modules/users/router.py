@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, File, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Query, Request, UploadFile
 
+from src.lib.limiter import get_email_key, limiter
 from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
 from src.modules.likes.dependencies import LikeServiceDep
 from src.modules.reviews.dependencies import ReviewServiceDep
@@ -43,8 +44,13 @@ async def update_password(
 
 
 @router.post("/forgot-password", response_model=dict[str, str])
+@limiter.limit("3/hour", key_func=get_email_key)
+@limiter.limit("5/minute")
 async def forgot_password(
-    service: UserServiceDep, data: ForgotPasswordRequest, bg_tasks: BackgroundTasks
+    request: Request,
+    service: UserServiceDep,
+    data: ForgotPasswordRequest,
+    bg_tasks: BackgroundTasks,
 ):
     return await service.forgot_password(data.email, bg_tasks)
 

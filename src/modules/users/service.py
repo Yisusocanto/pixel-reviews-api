@@ -20,7 +20,7 @@ from src.modules.users.schemas import UserPagination
 from src.modules.wishlists.schemas import WishlistPagination
 from src.modules.wishlists.service import WishlistService
 from src.services.mailer.client import MailerService
-from src.services.storage_service import StorageError, StorageService
+from src.services.storage.client import StorageError, StorageService
 
 logger = logging.getLogger("user_service")
 

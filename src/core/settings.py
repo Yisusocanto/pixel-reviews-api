@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = ""
     API_RAWG_KEY: str = ""
+    API_RAWG_URL: str = "https://api.rawg.io/api"
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:3000"
 

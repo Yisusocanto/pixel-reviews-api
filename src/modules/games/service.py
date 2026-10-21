@@ -11,7 +11,7 @@ from src.modules.platforms.service import PlatformService
 from src.modules.publisher.service import PublisherService
 from src.modules.stores.service import StoreService
 from src.schemas.rawg_responses import GameSearchPagination
-from src.services.rawg_service import RawgService, rawg_service
+from src.services.rawg.client import RawgService
 
 
 class GameService:
@@ -23,7 +23,7 @@ class GameService:
         store_service: StoreService,
         genre_service: GenreService,
         platform_service: PlatformService,
-        rawg_client: RawgService = rawg_service,
+        rawg_service: RawgService,
     ) -> None:
         self.repo = repo
         self.dev_service = dev_service
@@ -31,7 +31,7 @@ class GameService:
         self.store_service = store_service
         self.genre_service = genre_service
         self.platform_service = platform_service
-        self.rawg_client = rawg_client
+        self.rawg_client = rawg_service
 
     async def search_games(
         self, game_title: str = "", page: int = 1, limit: int = 20

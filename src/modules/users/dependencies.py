@@ -8,8 +8,8 @@ from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.users.repository import UserRepository
 from src.modules.users.service import UserService
 from src.modules.wishlists.dependencies import WishlistServiceDep
-from src.services.dependencies import StorageServiceDep
 from src.services.mailer.dependencies import MailerServiceDep
+from src.services.storage.dependencies import StorageServiceDep
 
 
 def get_user_repository(session: SessionDep) -> UserRepository:

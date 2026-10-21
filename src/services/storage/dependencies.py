@@ -6,7 +6,7 @@ from botocore.client import BaseClient
 from fastapi import Depends
 
 from src.core.settings import settings
-from src.services.storage_service import StorageService
+from src.services.storage.client import StorageService
 
 
 @lru_cache

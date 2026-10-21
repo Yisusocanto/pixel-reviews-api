@@ -3,7 +3,6 @@ from typing import Any
 
 import httpx
 
-from src.core.settings import settings
 from src.modules.developers.models import DeveloperCreate
 from src.modules.genres.models import GenreCreate
 from src.modules.platforms.models import PlatformCreate
@@ -17,15 +16,17 @@ from src.schemas.rawg_responses import (
 
 logger = logging.getLogger("rawg_service")
 
-API_URL = "https://api.rawg.io/api"
-
 
 class RawgService:
+    def __init__(self, api_url: str, api_key: str):
+        self.api_url = api_url
+        self.api_key = api_key
+
     async def _get(
         self, endpoint: str, params: dict[str, Any] | None = None
     ) -> httpx.Response | None:
         """Centralized HTTP GET request with logging and error reporting."""
-        query_params: dict[str, Any] = {"key": settings.API_RAWG_KEY}
+        query_params: dict[str, Any] = {"key": self.api_key}
         if params:
             query_params.update(params)
 
@@ -34,7 +35,7 @@ class RawgService:
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{API_URL}{endpoint}", params=query_params)
+                response = await client.get(f"{self.api_url}{endpoint}", params=query_params)
 
             if response.is_error:
                 logger.error(
@@ -185,6 +186,3 @@ class RawgService:
         data = response.json()
         results = data.get("results", [])
         return [screenshot["image"] for screenshot in results if "image" in screenshot]
-
-
-rawg_service = RawgService()

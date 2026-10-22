@@ -13,8 +13,11 @@ from src.schemas.rawg_responses import (
     GameSearchPagination,
     GameSearchRawgResponse,
 )
+from src.services.cache.client import CacheService
 
 logger = logging.getLogger("rawg_service")
+
+SEARCH_CACHE_TTL_SECONDS = 86400
 
 
 class RawgService:
@@ -23,10 +26,12 @@ class RawgService:
         api_url: str,
         api_key: str,
         http_client: httpx.AsyncClient | None = None,
+        cache: CacheService | None = None,
     ):
         self.api_url = api_url
         self.api_key = api_key
         self.http_client = http_client
+        self.cache = cache or CacheService()
 
     async def _get(
         self, endpoint: str, params: dict[str, Any] | None = None
@@ -69,11 +74,18 @@ class RawgService:
     async def search_games(
         self, game_title: str = "", page: int = 1, limit: int = 20
     ) -> GameSearchPagination | None:
+        stripped = game_title.strip()
+        cache_key = f"rawg:search:{stripped.lower()}:page:{page}:limit:{limit}"
+
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            logger.info("[RAWG] Cache HIT for '%s' (page %d)", stripped, page)
+            return GameSearchPagination.model_validate_json(cached)
+
         params: dict[str, Any] = {
             "page": page,
             "page_size": limit,
         }
-        stripped = game_title.strip()
         if stripped:
             params["search"] = stripped
 
@@ -101,19 +113,16 @@ class RawgService:
             for game in results
         ]
 
-        logger.debug(
-            "[RAWG] search '%s' page %d -> %d results (total: %d)",
-            game_title,
-            page,
-            len(games),
-            total,
-        )
-        return GameSearchPagination(
+        result = GameSearchPagination(
             items=games,
             total=total,
             total_pages=total_pages,
             page=page,
         )
+        await self.cache.set(
+            cache_key, result.model_dump_json(), ttl_seconds=SEARCH_CACHE_TTL_SECONDS
+        )
+        return result
 
     async def get_game_details(self, game_slug: str) -> GameDetailRawgResponse | None:
         response = await self._get(f"/games/{game_slug}")

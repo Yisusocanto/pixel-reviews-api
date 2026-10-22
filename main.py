@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from redis.asyncio import Redis
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -23,13 +24,17 @@ if settings.ENVIRONMENT == "development":
         format="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
     async with httpx.AsyncClient(timeout=10.0) as http_client:
         app.state.http_client = http_client
+        app.state.redis = redis_client
         yield
+    await redis_client.aclose()
     await engine.dispose()
 
 

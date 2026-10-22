@@ -1,5 +1,6 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 
+from src.lib.limiter import limiter
 from src.modules.auth.dependencies import AuthServiceDep, CurrentUserDep
 from src.modules.auth.models import (
     AuthResponse,
@@ -19,7 +20,9 @@ auth_router = APIRouter(prefix="/auth", tags=["Auth"])
     status_code=status.HTTP_201_CREATED,
     summary="Register and authenticate a new user",
 )
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_data: UserCreate,
     service: AuthServiceDep,
 ) -> AuthResponse:
@@ -31,7 +34,9 @@ async def register(
     response_model=AuthResponse,
     summary="Authenticate and obtain access & refresh tokens",
 )
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     login_data: LoginRequest,
     service: AuthServiceDep,
 ) -> AuthResponse:
@@ -43,7 +48,9 @@ async def login(
     response_model=AuthResponse,
     summary="Authenticate with Google ID token",
 )
+@limiter.limit("10/minute")
 async def google_login(
+    request: Request,
     data: GoogleLoginRequest,
     service: AuthServiceDep,
 ) -> AuthResponse:

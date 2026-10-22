@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=(".env", "src/.env"), extra="ignore")
 
     DATABASE_URL: str
+    REDIS_URL: str = "redis://localhost:6379/0"
     API_RAWG_KEY: str = ""
     API_RAWG_URL: str = "https://api.rawg.io/api"
     BACKEND_URL: str = "http://localhost:8000"

@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-and-tests:
+    name: Lint, Migrations & Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pixel_reviews
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d pixel_reviews"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pixel_reviews
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci_test_jwt_secret_key
+      API_RAWG_KEY: dummy_rawg_key
+      CF_ACCOUNT_ID: dummy_account_id
+      CF_BUCKET: dummy_bucket
+      CF_PUBLIC_URL: https://example.com
+      CF_ACCESS_KEY_ID: dummy_access_key
+      CF_SECRET_ACCESS_KEY: dummy_secret_key
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv and Python 3.14
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run Ruff linter
+        run: uv run ruff check
+
+      - name: Verify Ruff formatting
+        run: uv run ruff format --check
+
+      - name: Verify Alembic migrations
+        run: uv run alembic upgrade head
+
+      - name: Run Pytest suite
+        run: uv run pytest -v

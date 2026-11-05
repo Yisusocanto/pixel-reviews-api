@@ -26,7 +26,7 @@ class CommentBase(SQLModel):
 
 
 class Comment(CommentBase, TimestampMixin, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="users.id", index=True, ondelete="CASCADE")
 
     user: "User" = Relationship(back_populates="comments")  # noqa: UP037

@@ -177,7 +177,7 @@ class UserService:
             )
 
         old_key = user.profile_photo_key
-        new_key = f"profile/{uuid.uuid4()}{extension}"
+        new_key = f"profile/{uuid.uuid7()}{extension}"
 
         try:
             await self.storage.upload(

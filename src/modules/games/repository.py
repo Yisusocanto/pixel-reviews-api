@@ -27,7 +27,7 @@ class GameRepository:
         platforms: list[Platform],
     ) -> Game:
         # Atomic upsert: if a concurrent request already inserted this game, do nothing.
-        game_id = uuid.uuid4()
+        game_id = uuid.uuid7()
         await self.session.exec(
             pg_insert(Game).values(**data.model_dump(), id=game_id).on_conflict_do_nothing()
         )

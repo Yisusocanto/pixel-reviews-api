@@ -13,7 +13,7 @@ class GenreRepository:
 
     async def create(self, data: GenreCreate) -> Genre:
         stmt = (
-            pg_insert(Genre).values(**data.model_dump(), id=uuid.uuid4()).on_conflict_do_nothing()
+            pg_insert(Genre).values(**data.model_dump(), id=uuid.uuid7()).on_conflict_do_nothing()
         )
         await self.session.exec(stmt)
         result = await self.session.exec(

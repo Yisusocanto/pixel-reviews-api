@@ -35,7 +35,7 @@ class DeveloperBase(SQLModel):
 
 
 class Developer(DeveloperBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
 
     games: list["Game"] = Relationship(back_populates="developers", link_model=GameDeveloperLink)  # noqa: UP037
 

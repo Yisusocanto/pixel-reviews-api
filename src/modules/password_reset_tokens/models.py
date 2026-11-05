@@ -27,7 +27,7 @@ class PasswordResetTokenBase(SQLModel):
 class PasswordResetToken(PasswordResetTokenBase, table=True):
     __tablename__ = "password_reset_token"
 
-    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid7)
 
     user: "User" = Relationship(back_populates="password_reset_tokens")  # noqa: UP037
 

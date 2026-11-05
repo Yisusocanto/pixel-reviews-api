@@ -27,7 +27,7 @@ class LikeBase(SQLModel):
 class Like(LikeBase, TimestampMixin, table=True):
     __tablename__ = "likes"
 
-    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid7)
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
 
     user: "User" = Relationship(back_populates="likes")  # noqa: UP037

@@ -50,7 +50,7 @@ async def test_password_hash_and_verify() -> None:
 
 
 def test_jwt_access_and_refresh_token_lifecycle() -> None:
-    user_id = uuid.uuid4()
+    user_id = uuid.uuid7()
     access_token = create_access_token(user_id)
     refresh_token = create_refresh_token(user_id)
 
@@ -64,7 +64,7 @@ def test_jwt_access_and_refresh_token_lifecycle() -> None:
 
 
 def test_jwt_rejects_wrong_token_type() -> None:
-    user_id = uuid.uuid4()
+    user_id = uuid.uuid7()
     refresh_token = create_refresh_token(user_id)
 
     with pytest.raises(HTTPException) as exc_info:
@@ -74,7 +74,7 @@ def test_jwt_rejects_wrong_token_type() -> None:
 
 
 def test_jwt_rejects_expired_token() -> None:
-    user_id = uuid.uuid4()
+    user_id = uuid.uuid7()
     expired_token = create_token(
         subject=user_id,
         token_type=TOKEN_TYPE_ACCESS,

@@ -25,7 +25,7 @@ class WishlistBase(SQLModel):
 
 
 class Wishlist(WishlistBase, TimestampMixin, table=True):
-    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid7)
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
 
     game: "Game" = Relationship(  # noqa: UP037

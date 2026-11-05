@@ -14,7 +14,7 @@ class PlatformRepository:
     async def create(self, data: PlatformCreate) -> Platform:
         stmt = (
             pg_insert(Platform)
-            .values(**data.model_dump(), id=uuid.uuid4())
+            .values(**data.model_dump(), id=uuid.uuid7())
             .on_conflict_do_nothing()
         )
         await self.session.exec(stmt)

@@ -15,7 +15,7 @@ class DeveloperRepository:
         # Atomic upsert: concurrent requests may try to insert the same RAWG entity.
         stmt = (
             pg_insert(Developer)
-            .values(**data.model_dump(), id=uuid.uuid4())
+            .values(**data.model_dump(), id=uuid.uuid7())
             .on_conflict_do_nothing()
         )
         await self.session.exec(stmt)

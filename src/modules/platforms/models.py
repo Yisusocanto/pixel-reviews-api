@@ -34,7 +34,7 @@ class PlatformBase(SQLModel):
 
 
 class Platform(PlatformBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
 
     games: list["Game"] = Relationship(  # noqa: UP037
         back_populates="platforms", link_model=GamePlatformLink

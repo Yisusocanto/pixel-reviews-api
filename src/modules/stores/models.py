@@ -39,7 +39,7 @@ class StoreBase(SQLModel):
 
 
 class Store(StoreBase, table=True):
-    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid7)
 
     games: list["Game"] = Relationship(  # noqa: UP037
         back_populates="stores",

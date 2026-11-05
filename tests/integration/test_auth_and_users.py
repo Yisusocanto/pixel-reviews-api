@@ -8,7 +8,9 @@ from tests.conftest import FakeMailerService
 async def test_health_check(client: AsyncClient) -> None:
     response = await client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    assert data["database"] == "ok"
+    assert data["status"] in {"ok", "degraded"}
 
 
 async def test_register_login_and_me_flow(client: AsyncClient) -> None:

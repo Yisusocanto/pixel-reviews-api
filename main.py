@@ -2,14 +2,17 @@ import logging
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.settings import settings
-from src.db.database import engine
+from src.db.database import SessionDep, engine
 from src.lib.limiter import limiter
 from src.modules.auth.router import auth_router
 from src.modules.comments.router import router as comments_router
@@ -18,13 +21,16 @@ from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
 from src.modules.wishlists.router import router as wishlists_router
 
-if settings.ENVIRONMENT == "development":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+IS_PRODUCTION = settings.ENVIRONMENT == "production"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+logger = logging.getLogger("main")
 
 
 @asynccontextmanager
@@ -43,6 +49,9 @@ app = FastAPI(
     description="API for Pixel Reviews",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
 app.state.limiter = limiter
@@ -66,8 +75,33 @@ app.include_router(comments_router)
 
 
 @app.get("/health", tags=["Health"])
-async def health_check():
-    return {"status": "ok"}
+async def health_check(request: Request, response: Response, session: SessionDep):
+    checks = {"database": "ok", "redis": "ok"}
+
+    try:
+        await session.exec(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.exception("[HEALTH] Database check failed")
+        checks["database"] = "unavailable"
+
+    redis_client: Redis | None = getattr(request.app.state, "redis", None)
+    if redis_client is None:
+        checks["redis"] = "unavailable"
+    else:
+        try:
+            await redis_client.ping()
+        except RedisError:
+            logger.warning("[HEALTH] Redis check failed")
+            checks["redis"] = "unavailable"
+
+    if checks["database"] != "ok":
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "unhealthy", **checks}
+
+    if checks["redis"] != "ok":
+        return {"status": "degraded", **checks}
+
+    return {"status": "ok", **checks}
 
 
 if __name__ == "__main__":

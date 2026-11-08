@@ -12,7 +12,6 @@ class PublisherRepository:
         self.session = session
 
     async def create(self, data: PublisherCreate) -> Publisher:
-        # Atomic upsert: concurrent requests may try to insert the same RAWG entity.
         stmt = (
             pg_insert(Publisher)
             .values(**data.model_dump(), id=uuid.uuid7())
@@ -21,7 +20,7 @@ class PublisherRepository:
         await self.session.exec(stmt)
         result = await self.session.exec(
             select(Publisher)
-            .where(Publisher.rawg_id == data.rawg_id)
+            .where(Publisher.igdb_id == data.igdb_id)
             .execution_options(populate_existing=True)
         )
         return result.one()

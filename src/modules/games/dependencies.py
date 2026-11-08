@@ -10,7 +10,7 @@ from src.modules.genres.dependencies import GenreServiceDep
 from src.modules.platforms.dependencies import PlatformServiceDep
 from src.modules.publisher.dependencies import PublisherServiceDep
 from src.modules.stores.dependencies import StoreServiceDep
-from src.services.rawg.dependencies import RawgServiceDep
+from src.services.igdb.dependencies import IgdbServiceDep
 
 
 def get_game_repository(session: SessionDep) -> GameRepository:
@@ -27,7 +27,7 @@ def get_game_service(
     store_service: StoreServiceDep,
     genre_service: GenreServiceDep,
     platform_service: PlatformServiceDep,
-    rawg_service: RawgServiceDep,
+    igdb_service: IgdbServiceDep,
 ) -> GameService:
     return GameService(
         repo=repo,
@@ -36,7 +36,7 @@ def get_game_service(
         store_service=store_service,
         genre_service=genre_service,
         platform_service=platform_service,
-        rawg_service=rawg_service,
+        igdb_service=igdb_service,
     )
 
 

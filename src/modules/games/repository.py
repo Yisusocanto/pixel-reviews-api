@@ -22,20 +22,18 @@ class GameRepository:
         data: GameCreate,
         developers: list[Developer],
         publishers: list[Publisher],
-        stores: list[Store],
+        stores: list[tuple[Store, str | None]],
         genres: list[Genre],
         platforms: list[Platform],
     ) -> Game:
-        # Atomic upsert: if a concurrent request already inserted this game, do nothing.
         game_id = uuid.uuid7()
         await self.session.exec(
             pg_insert(Game).values(**data.model_dump(), id=game_id).on_conflict_do_nothing()
         )
-        game = await self.get_by_rawg_id(data.rawg_id)
+        game = await self.get_by_igdb_id(data.igdb_id)
         if game is None:
             raise RuntimeError("Game was not found after upsert")
 
-        # Only the request that actually inserted the game links its developers/publishers/stores.
         if game.id == game_id:
             if developers:
                 await self.session.exec(
@@ -51,24 +49,28 @@ class GameRepository:
                 )
             if stores:
                 await self.session.exec(
-                    pg_insert(GameStoreLink).values(
-                        [{"game_id": game_id, "store_id": s.id} for s in stores]
+                    pg_insert(GameStoreLink)
+                    .values(
+                        [{"game_id": game_id, "store_id": s.id, "url": url} for s, url in stores]
                     )
+                    .on_conflict_do_nothing()
                 )
             if genres:
                 await self.session.exec(
-                    pg_insert(GameGenreLink).values(
-                        [{"game_id": game_id, "genre_id": g.id} for g in genres]
-                    )
+                    pg_insert(GameGenreLink)
+                    .values([{"game_id": game_id, "genre_id": g.id} for g in genres])
+                    .on_conflict_do_nothing()
                 )
             if platforms:
                 await self.session.exec(
-                    pg_insert(GamePlatformLink).values(
-                        [{"game_id": game_id, "platform_id": p.id} for p in platforms]
-                    )
+                    pg_insert(GamePlatformLink)
+                    .values([{"game_id": game_id, "platform_id": p.id} for p in platforms])
+                    .on_conflict_do_nothing()
                 )
 
-            await self.session.refresh(game, ["developers", "publishers", "stores"])
+            game = await self.get_by_igdb_id(data.igdb_id)
+            if game is None:
+                raise RuntimeError("Game was not found after linking relations")
         return game
 
     async def get_by_slug(self, game_slug: str) -> Game | None:
@@ -78,25 +80,27 @@ class GameRepository:
             .options(
                 selectinload(Game.developers),
                 selectinload(Game.publishers),
-                selectinload(Game.stores),
+                selectinload(Game.store_links).selectinload(GameStoreLink.store),
                 selectinload(Game.genres),
                 selectinload(Game.platforms),
             )
+            .execution_options(populate_existing=True)
         )
         result = await self.session.exec(stmt)
         return result.first()
 
-    async def get_by_rawg_id(self, rawg_id: int) -> Game | None:
+    async def get_by_igdb_id(self, igdb_id: int) -> Game | None:
         stmt = (
             select(Game)
-            .where(Game.rawg_id == rawg_id)
+            .where(Game.igdb_id == igdb_id)
             .options(
                 selectinload(Game.developers),
                 selectinload(Game.publishers),
-                selectinload(Game.stores),
+                selectinload(Game.store_links).selectinload(GameStoreLink.store),
                 selectinload(Game.genres),
                 selectinload(Game.platforms),
             )
+            .execution_options(populate_existing=True)
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -113,7 +117,7 @@ class GameRepository:
             .options(
                 selectinload(Game.developers),
                 selectinload(Game.publishers),
-                selectinload(Game.stores),
+                selectinload(Game.store_links).selectinload(GameStoreLink.store),
                 selectinload(Game.genres),
                 selectinload(Game.platforms),
             )

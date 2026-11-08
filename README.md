@@ -18,12 +18,12 @@ RESTful backend service for **Pixel Reviews**, an open-source video game discove
 - **Domain-Driven Modular Structure:** Organized by domain (`auth`, `users`, `games`, `reviews`, `comments`, `likes`, `wishlists`, `developers`, `publishers`, `genres`, `platforms`, `stores`) using a strict `Router -> Service -> Repository` layered pattern and FastAPI dependency injection.
 - **Asynchronous Data Layer:** Built on `SQLModel` and `SQLAlchemy` async engines (`asyncpg`) with schema migrations managed via `Alembic`.
 - **Resilient Caching & Rate Limiting (Redis):**
-  - Implements a **Cache-Aside** strategy in `RawgService` backed by `redis.asyncio` to reduce external API latency and preserve rate-limit quotas, designed with **Fail-Open** degradation so cache outages never interrupt core traffic.
+  - Implements a **Cache-Aside** strategy in `IgdbService` backed by `redis.asyncio` to cache Twitch OAuth2 tokens and search queries, designed with **Fail-Open** degradation so cache outages never interrupt core traffic.
   - Distributed IP and account-level rate limiting via `SlowAPI` + Redis on sensitive authentication and password-recovery endpoints.
 - **Connection Lifecycle Management:** Manages persistent outbound HTTP connection pools (`httpx.AsyncClient`), Redis connections, and SQLAlchemy engine disposal through FastAPI's `lifespan` context manager.
 - **Authentication & Security:** Stateless JWT authentication (`access` + `refresh` tokens), Google OAuth 2.0 ID token verification, `bcrypt` password hashing, and SHA-256 hashed single-use password reset tokens with expiration windows.
 - **External Integrations:**
-  - **RAWG Video Games Database API** for on-demand game search, metadata hydration, and canonical slug resolution.
+  - **IGDB API v4 (Twitch / Amazon)** with automated OAuth2 client-credentials token rotation for on-demand game search, box-art/artwork hydration, storylines, official trailers, critic scores, and store links.
   - **Cloudflare R2 (S3-compatible)** via `boto3` for immutable profile photo storage with automatic orphan cleanup.
   - **Resend** for asynchronous transactional emails dispatched via background tasks.
 
@@ -38,6 +38,7 @@ RESTful backend service for **Pixel Reviews**, an open-source video game discove
 | **Database & ORM** | PostgreSQL 17, SQLModel, AsyncPG, Alembic |
 | **Cache & Rate Limiting** | Redis 7, SlowAPI |
 | **Authentication** | PyJWT, Bcrypt, Google OAuth2 |
+| **External Game Data** | IGDB API v4 (Twitch OAuth2) |
 | **Storage & Email** | Cloudflare R2 (`boto3`), Resend |
 | **Package & Env Manager** | `uv` (Astral) |
 | **Testing & Quality** | Pytest, Pytest-Asyncio, HTTPX, Ruff |
@@ -57,7 +58,7 @@ pixel-reviews-api/
 │   ├── lib/                 # Shared utilities (rate limiter, password hashing, dates)
 │   ├── modules/             # Domain modules (router, service, repository, models, schemas)
 │   ├── schemas/             # External API response schemas
-│   └── services/            # Infrastructure clients (cache, mailer, rawg, storage)
+│   └── services/            # Infrastructure clients (cache, igdb, mailer, storage)
 ├── templates/               # Transactional HTML email templates
 ├── tests/
 │   ├── conftest.py          # Isolated test DB setup, fixtures, and dependency overrides
@@ -101,7 +102,8 @@ cp .env.example .env
 | `BACKEND_URL` | Public URL of this API | `http://localhost:8000` |
 | `FRONTEND_URL` | Allowed CORS origin and base URL for password reset links | `http://localhost:3000` |
 | `JWT_SECRET_KEY` | Secret key for signing JWT tokens (required in production) | `openssl rand -hex 32` |
-| `API_RAWG_KEY` | API key from [rawg.io/apidocs](https://rawg.io/apidocs) | `your_rawg_api_key` |
+| `TWITCH_CLIENT_ID` | Twitch Developer Client ID for IGDB v4 | `your_twitch_client_id` |
+| `TWITCH_CLIENT_SECRET` | Twitch Developer Client Secret for IGDB v4 | `your_twitch_client_secret` |
 | `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | `your_client_id.apps.googleusercontent.com` |
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) | `re_...` |
 | `CF_ACCOUNT_ID` | Cloudflare account identifier for R2 storage | `your_cloudflare_account_id` |
@@ -143,7 +145,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Running Tests & Code Quality
 
-The test suite uses an isolated PostgreSQL database (`pixel_reviews_test`) created automatically on the running PostgreSQL instance, ensuring development data in `pixel_reviews` is never modified or erased. External services (`MailerService`, `StorageService`, `RawgService`) are replaced via FastAPI `dependency_overrides` and mock transports.
+The test suite uses an isolated PostgreSQL database (`pixel_reviews_test`) created automatically on the running PostgreSQL instance, ensuring development data in `pixel_reviews` is never modified or erased. External services (`MailerService`, `StorageService`, `IgdbService`) are replaced via FastAPI `dependency_overrides` and mock transports.
 
 Make sure the `db` container is running (`docker compose up -d db`), then execute:
 

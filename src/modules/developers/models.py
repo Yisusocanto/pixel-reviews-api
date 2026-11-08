@@ -29,7 +29,7 @@ class DeveloperBase(SQLModel):
         validate_by_name=True,
     )
 
-    rawg_id: int = Field(index=True, unique=True)
+    igdb_id: int = Field(index=True, unique=True)
     name: str = Field(index=True)
     slug: str = Field(index=True, unique=True)
 
@@ -37,7 +37,7 @@ class DeveloperBase(SQLModel):
 class Developer(DeveloperBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
 
-    games: list["Game"] = Relationship(back_populates="developers", link_model=GameDeveloperLink)  # noqa: UP037
+    games: list[Game] = Relationship(back_populates="developers", link_model=GameDeveloperLink)
 
 
 class DeveloperCreate(DeveloperBase):

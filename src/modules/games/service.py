@@ -10,8 +10,8 @@ from src.modules.genres.service import GenreService
 from src.modules.platforms.service import PlatformService
 from src.modules.publisher.service import PublisherService
 from src.modules.stores.service import StoreService
-from src.schemas.rawg_responses import GameSearchPagination
-from src.services.rawg.client import RawgService
+from src.schemas.igdb_responses import GameSearchPagination
+from src.services.igdb.client import IgdbService
 
 
 class GameService:
@@ -23,7 +23,7 @@ class GameService:
         store_service: StoreService,
         genre_service: GenreService,
         platform_service: PlatformService,
-        rawg_service: RawgService,
+        igdb_service: IgdbService,
     ) -> None:
         self.repo = repo
         self.dev_service = dev_service
@@ -31,12 +31,12 @@ class GameService:
         self.store_service = store_service
         self.genre_service = genre_service
         self.platform_service = platform_service
-        self.rawg_client = rawg_service
+        self.igdb_client = igdb_service
 
     async def search_games(
         self, game_title: str = "", page: int = 1, limit: int = 20
     ) -> GameSearchPagination:
-        games = await self.rawg_client.search_games(game_title=game_title, page=page, limit=limit)
+        games = await self.igdb_client.search_games(game_title=game_title, page=page, limit=limit)
         if games is None:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -50,14 +50,13 @@ class GameService:
         if game:
             return game
 
-        api_game = await self.rawg_client.get_game_details(game_slug)
+        api_game = await self.igdb_client.get_game_details(game_slug)
         if not api_game:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
 
-        # If RAWG redirected to a canonical slug or the game already exists by RAWG ID, reuse it
         game = await self.repo.get_by_slug(api_game.slug)
         if not game:
-            game = await self.repo.get_by_rawg_id(api_game.rawg_id)
+            game = await self.repo.get_by_igdb_id(api_game.igdb_id)
         if game:
             return game
 
@@ -75,15 +74,22 @@ class GameService:
             GameCreate(
                 title=api_game.title,
                 slug=api_game.slug,
-                rawg_id=api_game.rawg_id,
+                igdb_id=api_game.igdb_id,
                 description=api_game.description,
-                metacritic_score=api_game.metacritic_score,
-                metacritic_url=api_game.metacritic_url,
+                storyline=api_game.storyline,
+                critic_score=api_game.critic_score,
+                critic_score_count=api_game.critic_score_count,
+                igdb_url=api_game.igdb_url,
                 website=api_game.website,
                 release_date=api_game.release_date,
                 image_url=api_game.image_url,
                 background_image=api_game.background_image,
+                trailer_youtube_id=api_game.trailer_youtube_id,
+                trailer_title=api_game.trailer_title,
                 screenshots=api_game.screenshots,
+                game_modes=api_game.game_modes,
+                themes=api_game.themes,
+                player_perspectives=api_game.player_perspectives,
             ),
             developers=developers,
             publishers=publishers,

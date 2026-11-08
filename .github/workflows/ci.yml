@@ -41,7 +41,8 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pixel_reviews
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: ci_test_jwt_secret_key
-      API_RAWG_KEY: dummy_rawg_key
+      TWITCH_CLIENT_ID: dummy_twitch_client_id
+      TWITCH_CLIENT_SECRET: dummy_twitch_client_secret
       CF_ACCOUNT_ID: dummy_account_id
       CF_BUCKET: dummy_bucket
       CF_PUBLIC_URL: https://example.com

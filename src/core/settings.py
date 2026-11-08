@@ -9,12 +9,13 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     REDIS_URL: str = "redis://localhost:6379/0"
-    API_RAWG_KEY: str = ""
-    API_RAWG_URL: str = "https://api.rawg.io/api"
+    TWITCH_CLIENT_ID: str = ""
+    TWITCH_CLIENT_SECRET: str = ""
+    TWITCH_AUTH_URL: str = "https://id.twitch.tv/oauth2/token"
+    IGDB_API_URL: str = "https://api.igdb.com/v4"
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:3000"
 
-    # JWT Auth Settings
     JWT_SECRET_KEY: str = "supersecret_jwt_key_change_me_in_production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
@@ -24,7 +25,6 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     RESEND_DOMAIN: str = "onboarding@resend.dev"
 
-    # Cloudflare R2
     CF_ACCOUNT_ID: str
     CF_BUCKET: str
     CF_PUBLIC_URL: str

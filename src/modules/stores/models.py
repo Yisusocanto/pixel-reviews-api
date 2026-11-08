@@ -20,6 +20,10 @@ class GameStoreLink(SQLModel, table=True):
 
     game_id: uuid.UUID = Field(foreign_key="game.id", primary_key=True)
     store_id: uuid.UUID = Field(foreign_key="store.id", primary_key=True)
+    url: str | None = None
+
+    game: Game = Relationship(back_populates="store_links")
+    store: Store = Relationship(back_populates="game_links")
 
     __table_args__ = (UniqueConstraint("game_id", "store_id", name="uq_game_store"),)
 
@@ -35,17 +39,18 @@ class StoreBase(SQLModel):
     name: str
     slug: str = Field(unique=True, index=True)
     domain: str
-    url: str | None
 
 
 class Store(StoreBase, table=True):
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid7)
 
-    games: list["Game"] = Relationship(  # noqa: UP037
-        back_populates="stores",
-        link_model=GameStoreLink,
-    )
+    game_links: list[GameStoreLink] = Relationship(back_populates="store")
 
 
 class StoreCreate(StoreBase):
-    pass
+    url: str | None = None
+
+
+class StoreRead(StoreBase):
+    id: uuid.UUID
+    url: str | None = None

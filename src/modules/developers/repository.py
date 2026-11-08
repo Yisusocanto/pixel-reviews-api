@@ -12,7 +12,6 @@ class DeveloperRepository:
         self.session = session
 
     async def create(self, data: DeveloperCreate) -> Developer:
-        # Atomic upsert: concurrent requests may try to insert the same RAWG entity.
         stmt = (
             pg_insert(Developer)
             .values(**data.model_dump(), id=uuid.uuid7())
@@ -21,7 +20,7 @@ class DeveloperRepository:
         await self.session.exec(stmt)
         result = await self.session.exec(
             select(Developer)
-            .where(Developer.rawg_id == data.rawg_id)
+            .where(Developer.igdb_id == data.igdb_id)
             .execution_options(populate_existing=True)
         )
         return result.one()

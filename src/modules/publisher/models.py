@@ -22,12 +22,6 @@ class GamePublisherLink(SQLModel, table=True):
 
 
 class PublisherBase(SQLModel):
-    rawg_id: int = Field(index=True, unique=True)
-    slug: str = Field(index=True, unique=True)
-    name: str = Field(index=True)
-
-
-class Publisher(PublisherBase, table=True):
     model_config = ConfigDict(
         from_attributes=True,
         alias_generator=to_camel,
@@ -35,9 +29,15 @@ class Publisher(PublisherBase, table=True):
         validate_by_name=True,
     )
 
+    igdb_id: int = Field(index=True, unique=True)
+    slug: str = Field(index=True, unique=True)
+    name: str = Field(index=True)
+
+
+class Publisher(PublisherBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
 
-    games: list["Game"] = Relationship(back_populates="publishers", link_model=GamePublisherLink)  # noqa: UP037
+    games: list[Game] = Relationship(back_populates="publishers", link_model=GamePublisherLink)
 
 
 class PublisherCreate(PublisherBase):

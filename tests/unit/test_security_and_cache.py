@@ -16,7 +16,7 @@ from src.modules.auth.security import (
     decode_token,
 )
 from src.services.cache.client import CacheService
-from src.services.rawg.client import RawgService
+from src.services.igdb.client import IgdbService
 
 
 class InMemoryRedisFake:
@@ -99,25 +99,31 @@ async def test_cache_service_resilience_on_redis_failure() -> None:
     assert result is None
 
 
-async def test_rawg_search_uses_redis_cache_after_first_call() -> None:
-    call_count = 0
+async def test_igdb_search_uses_redis_cache_and_oauth_token() -> None:
+    oauth_calls = 0
+    games_calls = 0
 
     def mock_handler(request: httpx.Request) -> httpx.Response:
-        nonlocal call_count
-        call_count += 1
+        nonlocal oauth_calls, games_calls
+        if "oauth2/token" in str(request.url):
+            oauth_calls += 1
+            return httpx.Response(200, json={"access_token": "fake_igdb_token", "expires_in": 3600})
+        if request.url.path.endswith("/games/count"):
+            return httpx.Response(200, json={"count": 1})
+        games_calls += 1
         return httpx.Response(
             200,
-            json={
-                "count": 1,
-                "results": [
-                    {
-                        "name": "Hollow Knight",
-                        "slug": "hollow-knight",
-                        "released": "2017-02-24",
-                        "background_image": "https://example.com/hk.jpg",
-                    }
-                ],
-            },
+            json=[
+                {
+                    "id": 119133,
+                    "name": "Elden Ring",
+                    "slug": "elden-ring",
+                    "first_release_date": 1645747200,
+                    "aggregated_rating": 96.9,
+                    "cover": {"image_id": "co4jni"},
+                    "artworks": [{"image_id": "ar3m1o"}],
+                }
+            ],
         )
 
     transport = httpx.MockTransport(mock_handler)
@@ -125,18 +131,108 @@ async def test_rawg_search_uses_redis_cache_after_first_call() -> None:
     cache = CacheService(redis_client=fake_redis)
 
     async with httpx.AsyncClient(transport=transport) as http_client:
-        service = RawgService(
-            api_url="https://api.rawg.io/api",
-            api_key="fake_key",
+        service = IgdbService(
+            api_url="https://api.igdb.com/v4",
+            auth_url="https://id.twitch.tv/oauth2/token",
+            client_id="fake_client",
+            client_secret="fake_secret",
             http_client=http_client,
             cache=cache,
         )
 
-        first_result = await service.search_games("Hollow Knight", page=1, limit=20)
-        second_result = await service.search_games("hollow knight", page=1, limit=20)
+        first_result = await service.search_games("Elden Ring", page=1, limit=20)
+        second_result = await service.search_games("elden ring", page=1, limit=20)
 
-    assert call_count == 1
+    assert oauth_calls == 1
+    assert games_calls == 1
     assert first_result is not None
     assert second_result is not None
-    assert first_result.items[0].slug == "hollow-knight"
-    assert second_result.items[0].slug == "hollow-knight"
+    assert first_result.items[0].slug == "elden-ring"
+    assert first_result.items[0].critic_score == 97
+    assert (
+        first_result.items[0].image_url
+        == "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co4jni.webp"
+    )
+    assert second_result.items[0].slug == "elden-ring"
+
+
+async def test_igdb_get_game_details_parses_enriched_fields() -> None:
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        if "oauth2/token" in str(request.url):
+            return httpx.Response(200, json={"access_token": "fake_igdb_token", "expires_in": 3600})
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "id": 119133,
+                    "name": "Elden Ring",
+                    "slug": "elden-ring",
+                    "summary": "Action RPG in the Lands Between.",
+                    "storyline": "The Elden Ring was shattered.",
+                    "first_release_date": 1645747200,
+                    "aggregated_rating": 96.9,
+                    "aggregated_rating_count": 10,
+                    "url": "https://www.igdb.com/games/elden-ring",
+                    "cover": {"image_id": "co4jni"},
+                    "artworks": [{"image_id": "ar3m1o"}],
+                    "screenshots": [{"image_id": "scagdo"}],
+                    "videos": [{"name": "Launch Trailer", "video_id": "qqiC88f9ogU"}],
+                    "game_modes": [{"name": "Single player"}, {"name": "Co-operative"}],
+                    "themes": [{"name": "Fantasy"}, {"name": "Open world"}],
+                    "player_perspectives": [{"name": "Third person"}],
+                    "genres": [{"name": "Role-playing (RPG)", "slug": "role-playing-rpg"}],
+                    "platforms": [{"name": "PC (Microsoft Windows)", "slug": "win"}],
+                    "involved_companies": [
+                        {
+                            "developer": True,
+                            "publisher": False,
+                            "company": {"id": 1012, "name": "FromSoftware", "slug": "fromsoftware"},
+                        },
+                        {
+                            "developer": False,
+                            "publisher": True,
+                            "company": {
+                                "id": 248,
+                                "name": "Bandai Namco",
+                                "slug": "bandai-namco",
+                            },
+                        },
+                    ],
+                    "websites": [
+                        {"url": "https://store.steampowered.com/app/1245620"},
+                        {"url": "https://www.bandainamcoent.com/games/elden-ring"},
+                        {"url": "https://twitter.com/ELDENRING"},
+                    ],
+                }
+            ],
+        )
+
+    transport = httpx.MockTransport(mock_handler)
+    fake_redis = InMemoryRedisFake()
+    cache = CacheService(redis_client=fake_redis)
+
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        service = IgdbService(
+            api_url="https://api.igdb.com/v4",
+            auth_url="https://id.twitch.tv/oauth2/token",
+            client_id="fake_client",
+            client_secret="fake_secret",
+            http_client=http_client,
+            cache=cache,
+        )
+        detail = await service.get_game_details("elden-ring")
+
+    assert detail is not None
+    assert detail.igdb_id == 119133
+    assert detail.storyline == "The Elden Ring was shattered."
+    assert detail.critic_score == 97
+    assert detail.critic_score_count == 10
+    assert detail.trailer_youtube_id == "qqiC88f9ogU"
+    assert detail.trailer_title == "Launch Trailer"
+    assert detail.game_modes == ["Single player", "Co-operative"]
+    assert detail.themes == ["Fantasy", "Open world"]
+    assert detail.player_perspectives == ["Third person"]
+    assert detail.website == "https://www.bandainamcoent.com/games/elden-ring"
+    assert len(detail.stores) == 1
+    assert detail.stores[0].slug == "steam"
+    assert detail.stores[0].url == "https://store.steampowered.com/app/1245620"

@@ -7,7 +7,7 @@ from src.modules.games.dependencies import GameServiceDep
 from src.modules.games.schemas import GamePagination, GameResponse, GameStats
 from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
-from src.schemas.rawg_responses import GameSearchPagination
+from src.schemas.igdb_responses import GameSearchPagination
 
 router = APIRouter(prefix="/games", tags=["Games"])
 

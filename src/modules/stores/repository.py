@@ -1,5 +1,6 @@
 import uuid
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -11,11 +12,21 @@ class StoreRepository:
         self.session = session
 
     async def create(self, data: StoreCreate) -> Store:
-        new_store = Store(**data.model_dump())
-        self.session.add(new_store)
-        await self.session.flush()
-        await self.session.refresh(new_store)
-        return new_store
+        stmt = (
+            pg_insert(Store)
+            .values(
+                id=uuid.uuid7(),
+                name=data.name,
+                slug=data.slug,
+                domain=data.domain,
+            )
+            .on_conflict_do_nothing()
+        )
+        await self.session.exec(stmt)
+        result = await self.session.exec(
+            select(Store).where(Store.slug == data.slug).execution_options(populate_existing=True)
+        )
+        return result.one()
 
     async def get_by_id(self, store_id: uuid.UUID) -> Store | None:
         return await self.session.get(Store, store_id)

@@ -5,7 +5,7 @@ from src.modules.games.models import GameBase
 from src.modules.genres.models import Genre
 from src.modules.platforms.models import Platform
 from src.modules.publisher.models import Publisher
-from src.modules.stores.models import Store
+from src.modules.stores.models import StoreRead
 from src.schemas.config_base import ConfigBase
 from src.schemas.pagination import Pagination
 
@@ -14,7 +14,7 @@ class GameResponse(GameBase):
     id: uuid.UUID
     developers: list[Developer]
     publishers: list[Publisher]
-    stores: list[Store]
+    stores: list[StoreRead]
     genres: list[Genre]
     platforms: list[Platform]
 

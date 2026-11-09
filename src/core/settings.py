@@ -34,7 +34,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     @model_validator(mode="after")
-    def validate_production_secrets(self) -> Self:
+    def validate_and_normalize_settings(self) -> Self:
+        if ".upstash.io" in self.REDIS_URL and self.REDIS_URL.startswith("redis://"):
+            self.REDIS_URL = "rediss://" + self.REDIS_URL.removeprefix("redis://")
+
         if self.ENVIRONMENT == "production" and (
             not self.JWT_SECRET_KEY
             or self.JWT_SECRET_KEY == "supersecret_jwt_key_change_me_in_production"

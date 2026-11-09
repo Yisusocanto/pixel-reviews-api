@@ -35,7 +35,13 @@ logger = logging.getLogger("main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
+    redis_client = Redis.from_url(
+        settings.REDIS_URL,
+        decode_responses=True,
+        health_check_interval=30,
+        socket_keepalive=True,
+        retry_on_timeout=True,
+    )
     async with httpx.AsyncClient(timeout=10.0) as http_client:
         app.state.http_client = http_client
         app.state.redis = redis_client

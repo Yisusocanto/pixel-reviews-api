@@ -6,7 +6,12 @@ from slowapi.util import get_remote_address
 
 from src.core.settings import settings
 
-limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=settings.REDIS_URL,
+    in_memory_fallback_enabled=True,
+    swallow_errors=True,
+)
 
 
 def get_email_key(request: Request) -> str:

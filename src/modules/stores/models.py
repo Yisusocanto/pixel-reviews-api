@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 from pydantic import ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -24,8 +23,6 @@ class GameStoreLink(SQLModel, table=True):
 
     game: Game = Relationship(back_populates="store_links")
     store: Store = Relationship(back_populates="game_links")
-
-    __table_args__ = (UniqueConstraint("game_id", "store_id", name="uq_game_store"),)
 
 
 class StoreBase(SQLModel):

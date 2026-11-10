@@ -16,6 +16,7 @@ from src.db.database import SessionDep, engine
 from src.lib.limiter import limiter
 from src.modules.auth.router import auth_router
 from src.modules.comments.router import router as comments_router
+from src.modules.fav_user_games.router import router as fav_user_games_router
 from src.modules.games.router import router as games_router
 from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
@@ -78,6 +79,7 @@ app.include_router(games_router)
 app.include_router(review_router)
 app.include_router(wishlists_router)
 app.include_router(comments_router)
+app.include_router(fav_user_games_router)
 
 
 @app.get("/health", tags=["Health"])

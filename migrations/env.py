@@ -10,6 +10,7 @@ from sqlmodel import SQLModel
 from src.core.settings import settings
 from src.modules.comments.models import Comment  # noqa: F401
 from src.modules.developers.models import Developer  # noqa: F401
+from src.modules.fav_user_games.models import FavUserGame  # noqa: F401
 from src.modules.games.models import Game  # noqa: F401
 from src.modules.genres.models import Genre  # noqa: F401
 from src.modules.likes.models import Like  # noqa: F401

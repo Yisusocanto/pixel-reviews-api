@@ -8,6 +8,7 @@ from sqlalchemy import ARRAY, Column, String
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.modules.developers.models import GameDeveloperLink
+from src.modules.fav_user_games.models import FavUserGame
 from src.modules.genres.models import GameGenreLink
 from src.modules.platforms.models import GamePlatformLink
 from src.modules.publisher.models import GamePublisherLink
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     from src.modules.platforms.models import Platform
     from src.modules.publisher.models import Publisher
     from src.modules.reviews.models import Review
+    from src.modules.users.models import User
     from src.modules.wishlists.models import Wishlist
 
 
@@ -76,6 +78,10 @@ class Game(GameBase, table=True):
     )
     genres: list[Genre] = Relationship(back_populates="games", link_model=GameGenreLink)
     platforms: list[Platform] = Relationship(back_populates="games", link_model=GamePlatformLink)
+    in_user_fav: list[User] = Relationship(
+        back_populates="fav_games",
+        link_model=FavUserGame,
+    )
 
     @property
     def stores(self) -> list[StoreRead]:

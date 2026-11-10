@@ -4,6 +4,8 @@ from fastapi import APIRouter, BackgroundTasks, File, Query, Request, UploadFile
 
 from src.lib.limiter import get_email_key, limiter
 from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
+from src.modules.fav_user_games.dependencies import FavUserGameServiceDep
+from src.modules.games.models import Game
 from src.modules.likes.dependencies import LikeServiceDep
 from src.modules.reviews.dependencies import ReviewServiceDep
 from src.modules.reviews.schemas import ReviewPagination
@@ -108,3 +110,11 @@ async def user_wishlist(
     limit: Annotated[int, Query(ge=1)] = 10,
 ):
     return await service.user_wishlist(page, limit, username)
+
+
+@router.get("/{username}/favorites", response_model=list[Game])
+async def user_fav_games(
+    service: UserServiceDep, fav_user_game_service: FavUserGameServiceDep, username: str
+):
+    user = await service.get_user(username)
+    return await fav_user_game_service.get_all(user.id)

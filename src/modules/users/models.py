@@ -8,11 +8,13 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
 from src.core.settings import settings
+from src.modules.fav_user_games.models import FavUserGame
 from src.modules.password_reset_tokens.models import PasswordResetToken
 from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
     from src.modules.comments.models import Comment
+    from src.modules.games.models import Game
     from src.modules.likes.models import Like
     from src.modules.reviews.models import Review
     from src.modules.wishlists.models import Wishlist
@@ -53,6 +55,10 @@ class User(UserBase, TimestampMixin, table=True):
     )
     password_reset_tokens: "PasswordResetToken" = Relationship(  # noqa: UP037
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    fav_games: list[Game] = Relationship(
+        back_populates="in_user_fav",
+        link_model=FavUserGame,
     )
 
 

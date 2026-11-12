@@ -107,3 +107,42 @@ async def test_forgot_and_reset_password_flow(
         },
     )
     assert new_login_res.status_code == 200
+
+
+async def test_delete_user_permanently_flow(client: AsyncClient) -> None:
+    register_res = await client.post(
+        "/auth/register",
+        json={
+            "email": "delete_me@example.com",
+            "username": "delete_target",
+            "password": "Password123",
+        },
+    )
+    assert register_res.status_code == 201
+    token = register_res.json()["access_token"]
+
+    delete_res = await client.delete(
+        "/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_res.status_code == 200
+
+    login_res = await client.post(
+        "/auth/login",
+        json={
+            "email": "delete_me@example.com",
+            "password": "Password123",
+        },
+    )
+    assert login_res.status_code == 401
+
+    recreate_res = await client.post(
+        "/auth/register",
+        json={
+            "email": "delete_me@example.com",
+            "username": "delete_target",
+            "password": "Password123",
+        },
+    )
+    assert recreate_res.status_code == 201
+    assert "access_token" in recreate_res.json()

@@ -71,6 +71,14 @@ class UserService:
 
         return await self.repo.create(new_user)
 
+    async def delete_permanently(self, user_id: uuid.UUID) -> User:
+        user = await self.repo.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        await self.repo.delete_permanently(user)
+        return user
+
     async def create_from_google(self, email: str, google_id: str, name: str | None = None) -> User:
         base_username = ""
         if name:

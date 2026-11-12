@@ -17,6 +17,11 @@ class UserRepository:
         await self.session.refresh(user)
         return user
 
+    async def delete_permanently(self, user: User) -> User:
+        await self.session.delete(user)
+        await self.session.flush()
+        return user
+
     async def get_user(self, user_id: uuid.UUID) -> User | None:
         return await self.session.get(User, user_id)
 

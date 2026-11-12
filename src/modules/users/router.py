@@ -38,6 +38,11 @@ async def update(service: UserServiceDep, data: UserUpdate, user: CurrentUserDep
     return await service.update(data, user.id)
 
 
+@router.delete("", response_model=UserResponse)
+async def delete_permanently(service: UserServiceDep, user: CurrentUserDep):
+    return await service.delete_permanently(user.id)
+
+
 @router.patch("/update-password", response_model=UserResponse)
 async def update_password(
     service: UserServiceDep, data: UpdatePasswordRequest, user: CurrentUserDep

@@ -43,6 +43,16 @@ async def delete_permanently(service: UserServiceDep, user: CurrentUserDep):
     return await service.delete_permanently(user.id)
 
 
+@router.get("/search", response_model=UserPagination)
+async def search_users(
+    service: UserServiceDep,
+    query: Annotated[str, Query()] = "",
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1)] = 10,
+):
+    return await service.search_users(query=query, page=page, limit=limit)
+
+
 @router.patch("/update-password", response_model=UserResponse)
 async def update_password(
     service: UserServiceDep, data: UpdatePasswordRequest, user: CurrentUserDep

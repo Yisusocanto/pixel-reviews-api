@@ -137,6 +137,19 @@ class UserService:
         updated_user = await self.repo.update_password(user, new_hashed_password)
         return updated_user
 
+    async def search_users(self, query: str, page: int, limit: int) -> UserPagination:
+        query = query.strip()
+        if not query:
+            return UserPagination(items=[], page=page, total=0, total_pages=0)
+
+        offset = (page - 1) * limit
+
+        users = await self.repo.search(query=query, offset=offset, limit=limit)
+        total = await self.repo.count_search_results(query)
+        total_pages = (total - 1 + limit) // limit if total > 0 else 0
+
+        return UserPagination(items=users, page=page, total=total, total_pages=total_pages)
+
     async def get_all(self, page: int, limit: int) -> UserPagination:
         offset = (page - 1) * limit
 

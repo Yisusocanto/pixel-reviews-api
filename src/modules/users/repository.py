@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.users.models import User, UserUpdate
@@ -51,6 +51,31 @@ class UserRepository:
         stmt = select(User).offset(offset).limit(limit)
         result = await self.session.exec(stmt)
         return result.all()
+
+    async def search(self, query: str, offset: int, limit: int) -> Sequence[User]:
+        stmt = (
+            select(User)
+            .where(self._username_filter(query))
+            .order_by(col(User.username), col(User.id))
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.session.exec(stmt)
+        return result.all()
+
+    @staticmethod
+    def _clean_query(query: str) -> str:
+        return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    def _username_filter(self, query: str):
+        clean_query = self._clean_query(query)
+        return col(User.username).ilike(f"%{clean_query}%", escape="\\")
+
+    async def count_search_results(self, query: str) -> int:
+        stmt = select(func.count(User.id)).where(self._username_filter(query))
+        result = await self.session.exec(stmt)
+        total = result.first()
+        return total if total is not None else 0
 
     async def count_all(self) -> int:
         stmt = select(func.count(User.id))

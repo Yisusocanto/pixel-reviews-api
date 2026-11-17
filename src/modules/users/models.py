@@ -1,15 +1,18 @@
 import uuid
 from datetime import datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import ConfigDict, computed_field
 from pydantic.alias_generators import to_camel
+from sqlalchemy import String
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
 from src.core.settings import settings
 from src.modules.fav_user_games.models import FavUserGame
 from src.modules.password_reset_tokens.models import PasswordResetToken
+from src.modules.review_moderation.models import ReviewModeration
 from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
@@ -18,6 +21,11 @@ if TYPE_CHECKING:
     from src.modules.likes.models import Like
     from src.modules.reviews.models import Review
     from src.modules.wishlists.models import Wishlist
+
+
+class UserRole(StrEnum):
+    USER = "user"
+    ADMIN = "admin"
 
 
 class UserBase(SQLModel):
@@ -40,6 +48,7 @@ class User(UserBase, TimestampMixin, table=True):
     hashed_password: str | None = Field(default=None, nullable=True)
     google_id: str | None = Field(default=None, unique=True, index=True)
     profile_photo_key: str | None = Field(default=None)
+    role: UserRole = Field(default=UserRole.USER, sa_type=String())
 
     reviews: list["Review"] = Relationship(  # noqa: UP037
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
@@ -60,6 +69,9 @@ class User(UserBase, TimestampMixin, table=True):
         back_populates="in_user_fav",
         link_model=FavUserGame,
     )
+    moderations: list["ReviewModeration"] = Relationship(  # noqa: UP037
+        back_populates="admin",
+    )
 
 
 class UserCreate(UserBase):
@@ -69,6 +81,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: uuid.UUID
     profile_photo_key: str | None = Field(default=None, exclude=True)
+    role: UserRole
     created_at: datetime
     updated_at: datetime
 

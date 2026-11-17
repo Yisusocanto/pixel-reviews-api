@@ -1,9 +1,11 @@
 import uuid
+from datetime import datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
@@ -12,7 +14,15 @@ if TYPE_CHECKING:
     from src.modules.comments.models import Comment
     from src.modules.games.models import Game
     from src.modules.likes.models import Like
+    from src.modules.review_moderation.models import ReviewModeration
     from src.modules.users.models import User
+
+
+class ModerationStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    NEEDS_REVIEW = "needs_review"
+    REJECTED = "rejected"
 
 
 class ReviewBase(SQLModel):
@@ -32,6 +42,15 @@ class ReviewBase(SQLModel):
 class Review(ReviewBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid7)
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
+    moderation_status: ModerationStatus = Field(
+        default=ModerationStatus.PENDING, sa_type=String(), index=True
+    )
+    moderation_reason: str | None = None
+    content_version: int = Field(default=1)
+    moderated_version: int = Field(default=0)
+    moderation_enqueued_at: datetime | None = Field(
+        sa_type=DateTime(timezone=True), default=None, nullable=True
+    )
 
     user: "User" = Relationship(  # noqa: UP037
         back_populates="reviews"
@@ -43,6 +62,9 @@ class Review(ReviewBase, TimestampMixin, table=True):
         back_populates="review", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
     comments: list["Comment"] = Relationship(  # noqa: UP037
+        back_populates="review", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    moderations: list["ReviewModeration"] = Relationship(  # noqa: UP037
         back_populates="review", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 

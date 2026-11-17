@@ -22,6 +22,7 @@ from src.modules.likes.models import Like
 from src.modules.password_reset_tokens.models import PasswordResetToken
 from src.modules.platforms.models import Platform
 from src.modules.publisher.models import Publisher
+from src.modules.review_moderation.models import ReviewModeration
 from src.modules.reviews.models import Review
 from src.modules.stores.models import Store
 from src.modules.users.models import User
@@ -39,6 +40,7 @@ REGISTERED_MODELS = (
     Platform,
     Publisher,
     Review,
+    ReviewModeration,
     Store,
     User,
     Wishlist,

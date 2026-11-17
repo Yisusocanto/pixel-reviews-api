@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, BackgroundTasks, Query
 
 from src.modules.auth.dependencies import CurrentUserDep, OptionalCurrentUserDep
 from src.modules.comments.dependencies import CommentServiceDep
@@ -34,8 +34,9 @@ async def create(
     data: ReviewCreate,
     service: ReviewServiceDep,
     current_user: CurrentUserDep,
+    bg_tasks: BackgroundTasks,
 ):
-    return await service.create(data, current_user.id)
+    return await service.create(data, current_user.id, bg_tasks)
 
 
 @router.get("/user-review/{game_id}", response_model=ReviewResponse)
@@ -60,9 +61,13 @@ async def delete(review_id: uuid.UUID, user: CurrentUserDep, service: ReviewServ
 
 @router.patch("/{review_id}", response_model=ReviewResponse)
 async def update(
-    service: ReviewServiceDep, review_id: uuid.UUID, user: CurrentUserDep, data: ReviewUpdate
+    service: ReviewServiceDep,
+    review_id: uuid.UUID,
+    user: CurrentUserDep,
+    data: ReviewUpdate,
+    bg_tasks: BackgroundTasks,
 ):
-    return await service.update(review_id=review_id, user_id=user.id, data=data)
+    return await service.update(review_id=review_id, user_id=user.id, data=data, bg_tasks=bg_tasks)
 
 
 @router.post("/{review_id}/like", response_model=LikeToggleResponse)

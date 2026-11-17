@@ -7,6 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.comments.models import Comment
 from src.modules.likes.models import Like
+from src.modules.review_moderation.models import ReviewModeration
 from src.modules.reviews.models import ModerationStatus, Review, ReviewUpdate
 
 
@@ -25,7 +26,11 @@ class ReviewRepository:
         stmt = (
             select(Review)
             .where(Review.id == review_id)
-            .options(selectinload(Review.user), selectinload(Review.game))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.game),
+                selectinload(Review.moderations),
+            )
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -39,7 +44,11 @@ class ReviewRepository:
         stmt = (
             select(Review, likes_count, liked_by_user, comments_count)
             .where(Review.id == review_id)
-            .options(selectinload(Review.user), selectinload(Review.game))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.game),
+                selectinload(Review.moderations),
+            )
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -57,6 +66,7 @@ class ReviewRepository:
             .options(
                 selectinload(Review.game),
                 selectinload(Review.user),
+                selectinload(Review.moderations),
             )
         )
         result = await self.session.exec(stmt)
@@ -85,7 +95,11 @@ class ReviewRepository:
             .order_by(Review.created_at.desc())
             .offset(offset)
             .limit(limit)
-            .options(selectinload(Review.user), selectinload(Review.game))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.game),
+                selectinload(Review.moderations),
+            )
         )
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
@@ -148,6 +162,13 @@ class ReviewRepository:
         data = new_data.model_dump(exclude_unset=True)
         review.sqlmodel_update(data)
         self.session.add(review)
+        await self.session.commit()
+        updated_review = await self.get_by_id(review.id)
+        return updated_review or review
+
+    async def save_appeal(self, review: Review, moderation: ReviewModeration) -> Review:
+        self.session.add(review)
+        self.session.add(moderation)
         await self.session.commit()
         updated_review = await self.get_by_id(review.id)
         return updated_review or review

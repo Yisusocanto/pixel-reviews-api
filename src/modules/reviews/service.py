@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.modules.games.schemas import GameStats
 from src.modules.games.service import GameService
+from src.modules.review_moderation.models import Judge, ReviewModeration, Verdict
 from src.modules.reviews.models import ModerationStatus, Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
 from src.modules.reviews.schemas import ReviewPagination, ReviewResponse
@@ -84,7 +85,9 @@ class ReviewService:
     async def get_by_id_with_likes(
         self, review_id: uuid.UUID, current_user_id: uuid.UUID | None = None
     ) -> ReviewResponse:
-        result = await self.repo.get_by_id_with_counters(review_id, current_user_id)
+        result = await self.repo.get_by_id_with_counters(
+            review_id=review_id, current_user_id=current_user_id
+        )
         if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
         review, count, is_liked, comments_count = result
@@ -254,6 +257,39 @@ class ReviewService:
 
         return await self.repo.update(review, data)
 
+    async def appeal(self, review_id: uuid.UUID, user_id: uuid.UUID) -> ReviewResponse:
+        review = await self.repo.get_by_id(review_id)
+        if not review:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+        if review.user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not allowed")
+
+        moderation_info = self._get_moderation_info(review, user_id)
+        if not moderation_info or not moderation_info["can_appeal"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This review cannot be appealed.",
+            )
+
+        review.moderation_status = ModerationStatus.NEEDS_REVIEW
+        appeal_record = ReviewModeration(
+            review_id=review.id,
+            content_version=review.content_version,
+            verdict=Verdict.DOUBT,
+            judge=Judge.USER_APPEAL,
+            reason=review.moderation_reason,
+            scores={},
+        )
+        await self.repo.save_appeal(review, appeal_record)
+        logger.info(
+            "[REVIEWS] User %s appealed review %s (v%s)",
+            user_id,
+            review.id,
+            review.content_version,
+        )
+        return await self.get_by_id_with_likes(review.id, current_user_id=user_id)
+
     async def update_moderation_info(
         self,
         review: Review,
@@ -312,11 +348,20 @@ class ReviewService:
 
     @staticmethod
     def _get_moderation_info(review: Review, current_user_id: uuid.UUID | None):
-        if review.user_id == current_user_id:
+        if current_user_id is not None and review.user_id == current_user_id:
+            already_appealed_or_decided = any(
+                m.content_version == review.content_version
+                and m.judge in (Judge.USER_APPEAL, Judge.ADMIN)
+                for m in (review.moderations or [])
+            )
+            can_appeal = (
+                review.moderation_status == ModerationStatus.REJECTED
+                and review.content_version == review.moderated_version
+                and not already_appealed_or_decided
+            )
             return {
                 "status": review.moderation_status,
                 "reason": review.moderation_reason,
-                "can_appeal": review.content_version == review.moderated_version
-                and review.moderation_status == ModerationStatus.REJECTED,
+                "can_appeal": can_appeal,
             }
         return None

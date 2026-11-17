@@ -70,6 +70,15 @@ async def update(
     return await service.update(review_id=review_id, user_id=user.id, data=data, bg_tasks=bg_tasks)
 
 
+@router.post("/{review_id}/appeal", response_model=ReviewResponse)
+async def appeal_review(
+    review_id: uuid.UUID,
+    service: ReviewServiceDep,
+    current_user: CurrentUserDep,
+):
+    return await service.appeal(review_id=review_id, user_id=current_user.id)
+
+
 @router.post("/{review_id}/like", response_model=LikeToggleResponse)
 async def toggle_like(
     review_id: uuid.UUID,

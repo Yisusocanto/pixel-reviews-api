@@ -77,6 +77,24 @@ services:
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
+  moderator:
+    build:
+      context: ../pixel-reviews-moderation
+      dockerfile: Dockerfile
+    container_name: pixel-reviews-moderator
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://pixel:pixel@rabbitmq:5672
+      API_BASE_URL: http://api:8000
+      MODERATION_SERVICE_KEY: ${MODERATION_SERVICE_KEY:-supersecret_moderation_service_key_change_me_in_production}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_started
+
 volumes:
   postgres_data:
   redis_data:

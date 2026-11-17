@@ -7,24 +7,34 @@
 
 RESTful backend service for **Pixel Reviews**, an open-source video game discovery, review, and cataloging platform.
 
-> **Version Notice (v2):** This repository contains the second generation of the Pixel Reviews backend, rebuilt from the ground up with an asynchronous architecture, modular domain separation, Redis caching, and automated testing. The first version of the project is now deprecated and archived for historical reference at [Pixel Reviews v1 (Deprecated)](https://github.com/Yisusocanto/pixel_reviews).
+> **Version Notice (v2):** This repository contains the second generation of the Pixel Reviews backend, rebuilt from the ground up with an asynchronous architecture, modular domain separation, Redis caching, RabbitMQ message queues, and automated testing. The first version of the project is now deprecated and archived for historical reference at [Pixel Reviews v1 (Deprecated)](https://github.com/Yisusocanto/pixel_reviews).
 >
-> **Companion Repository:** The Next.js frontend application is maintained at [pixel-reviews-frontend](https://github.com/Yisusocanto/pixel-reviews-frontend).
+> **Companion Repositories:**
+> - Frontend Application (Next.js): [pixel-reviews-frontend](https://github.com/Yisusocanto/pixel-reviews-frontend)
+> - Content Moderation Worker (Go): [pixel-reviews-moderator](https://github.com/Yisusocanto/pixel-reviews-moderator)
 
 ---
 
 ## Architecture & Engineering Highlights
 
-- **Domain-Driven Modular Structure:** Organized by domain (`auth`, `users`, `games`, `reviews`, `comments`, `likes`, `wishlists`, `developers`, `publishers`, `genres`, `platforms`, `stores`) using a strict `Router -> Service -> Repository` layered pattern and FastAPI dependency injection.
+- **Domain-Driven Modular Structure:** Organized by domain (`auth`, `users`, `games`, `reviews`, `comments`, `likes`, `wishlists`, `review_moderation`, `developers`, `publishers`, `genres`, `platforms`, `stores`) using a strict `Router -> Service -> Repository` layered pattern and FastAPI dependency injection.
 - **Asynchronous Data Layer:** Built on `SQLModel` and `SQLAlchemy` async engines (`asyncpg`) with schema migrations managed via `Alembic`.
+- **Asynchronous Content Moderation & RabbitMQ:**
+  - **Decoupled Publishing:** When a review with text is created or edited, it is published to a RabbitMQ quorum queue (`moderation.review.check`) with a Dead Letter Exchange (`moderation.dlx`) and delivery limit of 3.
+  - **Internal Callback Endpoint:** A Go worker processes rules and Gemini AI evaluation, reporting back via `POST /internal/moderation/verdicts` with timing-safe service key verification (`X-Service-Key`).
+  - **Self-Healing Sweeper:** A background reconciler runs periodically in the lifespan context using `SELECT ... FOR UPDATE SKIP LOCKED` to requeue unmoderated or stalled reviews.
+  - **Optimistic Locking:** Reviews maintain `content_version` and `moderated_version` to prevent race conditions between author edits and moderator decisions (409 Conflict).
+- **Administration & Appeals:**
+  - Dedicated admin endpoints (`/admin/moderation/reviews/*`) protected by `AdminDep` (`user.role == 'admin'`).
+  - Authors can appeal rejected reviews once per version (`POST /reviews/{id}/appeal`), moving them to manual review.
 - **Resilient Caching & Rate Limiting (Redis):**
   - Implements a **Cache-Aside** strategy in `IgdbService` backed by `redis.asyncio` to cache Twitch OAuth2 tokens and search queries, designed with **Fail-Open** degradation so cache outages never interrupt core traffic.
   - Distributed IP and account-level rate limiting via `SlowAPI` + Redis on sensitive authentication and password-recovery endpoints.
-- **Connection Lifecycle Management:** Manages persistent outbound HTTP connection pools (`httpx.AsyncClient`), Redis connections, and SQLAlchemy engine disposal through FastAPI's `lifespan` context manager.
+- **Connection Lifecycle Management:** Manages persistent outbound HTTP connection pools (`httpx.AsyncClient`), Redis connections, RabbitMQ client, and SQLAlchemy engine disposal through FastAPI's `lifespan` context manager.
 - **Authentication & Security:** Stateless JWT authentication (`access` + `refresh` tokens), Google OAuth 2.0 ID token verification, `bcrypt` password hashing, and SHA-256 hashed single-use password reset tokens with expiration windows.
 - **External Integrations:**
-  - **IGDB API v4 (Twitch / Amazon)** with automated OAuth2 client-credentials token rotation for on-demand game search, box-art/artwork hydration, storylines, official trailers, critic scores, and store links.
-  - **Cloudflare R2 (S3-compatible)** via `boto3` for immutable profile photo storage with automatic orphan cleanup.
+  - **IGDB API v4 (Twitch / Amazon)** with automated OAuth2 client-credentials token rotation.
+  - **Cloudflare R2 (S3-compatible)** via `boto3` for immutable profile photo storage.
   - **Resend** for asynchronous transactional emails dispatched via background tasks.
 
 ---
@@ -36,6 +46,7 @@ RESTful backend service for **Pixel Reviews**, an open-source video game discove
 | **Framework** | FastAPI, Uvicorn |
 | **Language & Runtime** | Python 3.14+ |
 | **Database & ORM** | PostgreSQL 17, SQLModel, AsyncPG, Alembic |
+| **Message Broker** | RabbitMQ 4 (Quorum Queues, DLX) via `aio-pika` |
 | **Cache & Rate Limiting** | Redis 7, SlowAPI |
 | **Authentication** | PyJWT, Bcrypt, Google OAuth2 |
 | **External Game Data** | IGDB API v4 (Twitch OAuth2) |
@@ -56,16 +67,16 @@ pixel-reviews-api/
 │   ├── core/                # Application settings (Pydantic) and model mixins
 │   ├── db/                  # Async SQLAlchemy engine and session dependency
 │   ├── lib/                 # Shared utilities (rate limiter, password hashing, dates)
-│   ├── modules/             # Domain modules (router, service, repository, models, schemas)
-│   ├── schemas/             # External API response schemas
-│   └── services/            # Infrastructure clients (cache, igdb, mailer, storage)
+│   ├── modules/             # Domain modules (auth, reviews, review_moderation, users, games...)
+│   ├── schemas/             # Shared & external response schemas
+│   └── services/            # Infrastructure clients (broker, cache, igdb, mailer, storage)
 ├── templates/               # Transactional HTML email templates
 ├── tests/
 │   ├── conftest.py          # Isolated test DB setup, fixtures, and dependency overrides
-│   ├── integration/         # End-to-end API route and database integration tests
-│   └── unit/                # Isolated unit tests for security, caching, and clients
+│   ├── integration/         # Integration tests (auth, reviews, moderation, appeals, admin)
+│   └── unit/                # Unit tests for security, cache, and token lifecycles
 ├── Dockerfile               # Production container image definition
-├── docker-compose.yml       # Local development stack (PostgreSQL 17, Redis 7, API)
+├── docker-compose.yml       # Full stack (PostgreSQL, Redis, RabbitMQ, API, Go Moderator)
 ├── main.py                  # FastAPI application entrypoint and lifespan configuration
 └── pyproject.toml           # Project dependencies and tool configurations
 ```
@@ -76,8 +87,8 @@ pixel-reviews-api/
 
 ### Prerequisites
 
-- **Docker** and **Docker Compose** (recommended for running PostgreSQL, Redis, and the API).
-- **uv** (optional, required if running Python commands directly on your host machine): [Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
+- **Docker** and **Docker Compose** (recommended for running PostgreSQL, Redis, RabbitMQ, API, and Go Moderator).
+- **uv** (optional, for running Python commands locally): [Installation Guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 ### 1. Clone the repository
 
@@ -99,9 +110,12 @@ cp .env.example .env
 | `ENVIRONMENT` | Runtime environment (`development` or `production`) | `development` |
 | `DATABASE_URL` | Async PostgreSQL connection string | `postgresql+asyncpg://postgres:postgres@localhost:5432/pixel_reviews` |
 | `REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` |
+| `RABBITMQ_URL` | RabbitMQ connection URL | `amqp://pixel:pixel@localhost:5672` |
+| `MODERATION_SERVICE_KEY` | Shared secret key for internal moderation callbacks | `openssl rand -hex 32` |
+| `MODERATION_SWEEPER_INTERVAL_SECONDS` | Interval for sweeper reconciler (seconds) | `600` |
 | `BACKEND_URL` | Public URL of this API | `http://localhost:8000` |
-| `FRONTEND_URL` | Allowed CORS origin and base URL for password reset links | `http://localhost:3000` |
-| `JWT_SECRET_KEY` | Secret key for signing JWT tokens (required in production) | `openssl rand -hex 32` |
+| `FRONTEND_URL` | Allowed CORS origin and base URL for reset links | `http://localhost:3000` |
+| `JWT_SECRET_KEY` | Secret key for signing JWT tokens | `openssl rand -hex 32` |
 | `TWITCH_CLIENT_ID` | Twitch Developer Client ID for IGDB v4 | `your_twitch_client_id` |
 | `TWITCH_CLIENT_SECRET` | Twitch Developer Client Secret for IGDB v4 | `your_twitch_client_secret` |
 | `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | `your_client_id.apps.googleusercontent.com` |
@@ -114,7 +128,7 @@ cp .env.example .env
 
 ### 3. Run the stack with Docker Compose (Recommended)
 
-Start PostgreSQL 17, Redis 7, and the FastAPI server with automatic database migrations and live hot-reload:
+Start PostgreSQL 17, Redis 7, RabbitMQ 4, the API, and the Go Moderator:
 
 ```bash
 docker compose up -d
@@ -122,20 +136,15 @@ docker compose up -d
 
 - **API Base URL:** `http://localhost:8000`
 - **Interactive OpenAPI Docs (Swagger UI):** `http://localhost:8000/docs`
+- **RabbitMQ Management Dashboard:** `http://localhost:15672` (user: `pixel`, pass: `pixel`)
 - **Health Check Endpoint:** `http://localhost:8000/health`
-
-To follow the API logs in real time:
-
-```bash
-docker compose logs -f api
-```
 
 ### Alternative: Run the API natively with `uv`
 
-If you prefer running only PostgreSQL and Redis in Docker while executing FastAPI directly on your host machine:
+If you run PostgreSQL, Redis, and RabbitMQ via Docker while running FastAPI natively:
 
 ```bash
-docker compose up -d db redis
+docker compose up -d db redis rabbitmq
 uv sync
 uv run alembic upgrade head
 uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -145,9 +154,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Running Tests & Code Quality
 
-The test suite uses an isolated PostgreSQL database (`pixel_reviews_test`) created automatically on the running PostgreSQL instance, ensuring development data in `pixel_reviews` is never modified or erased. External services (`MailerService`, `StorageService`, `IgdbService`) are replaced via FastAPI `dependency_overrides` and mock transports.
-
-Make sure the `db` container is running (`docker compose up -d db`), then execute:
+The test suite runs against an isolated PostgreSQL database (`pixel_reviews_test`). External dependencies (Mailer, Storage, IGDB, RabbitMQ producer) are stubbed via `conftest.py`.
 
 ```bash
 # Run the full unit and integration test suite
@@ -159,30 +166,6 @@ uv run ruff check
 # Verify code formatting
 uv run ruff format --check
 ```
-
----
-
-## Contributing
-
-Contributions, bug reports, and feature requests are welcome. To keep the commit history and review process consistent, please follow this workflow:
-
-1. **Fork and clone** the repository.
-2. **Create a branch** from `main` using semantic prefixes:
-   - `feat/<short-description>` for new features
-   - `fix/<short-description>` for bug fixes
-   - `perf/<short-description>` for performance improvements
-   - `refactor/<short-description>` for internal code restructuring
-   - `test/<short-description>` for adding or updating tests
-   - `chore/<short-description>` or `docs/<short-description>` for maintenance and documentation
-3. **Write tests** covering any new business logic or endpoints.
-4. **Verify quality checks locally** before committing:
-   ```bash
-   uv run ruff format
-   uv run ruff check
-   uv run pytest -v
-   ```
-5. **Commit your changes** following the [Conventional Commits](https://www.conventionalcommits.org/) specification (e.g., `feat(reviews): add pagination metadata to user reviews`).
-6. **Open a Pull Request** against `main`. All GitHub Actions CI checks (`Lint, Migrations & Tests`) must pass before merging.
 
 ---
 

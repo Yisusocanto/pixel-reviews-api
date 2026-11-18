@@ -75,3 +75,29 @@ jobs:
 
       - name: Run Pytest suite
         run: uv run pytest -v
+
+  deploy:
+    name: Deploy to Azure VM
+    needs: quality-and-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-deploy-api
+      cancel-in-progress: false
+
+    steps:
+      - name: Deploy API via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd ~/pixel/pixel-reviews-api
+            git fetch origin main
+            git reset --hard origin/main
+            cd deploy
+            docker compose -f docker-compose.prod.yml up -d --build api
+            docker image prune -f
+

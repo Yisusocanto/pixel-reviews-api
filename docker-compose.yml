@@ -31,6 +31,24 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: pixel-reviews-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: pixel
+      RABBITMQ_DEFAULT_PASS: pixel
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -42,6 +60,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/pixel_reviews
       REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://pixel:pixel@rabbitmq:5672
     ports:
       - "8000:8000"
     volumes:
@@ -52,10 +71,31 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     command: >
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
+  moderator:
+    build:
+      context: ../pixel-reviews-moderation
+      dockerfile: Dockerfile
+    container_name: pixel-reviews-moderator
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://pixel:pixel@rabbitmq:5672
+      API_BASE_URL: http://api:8000
+      MODERATION_SERVICE_KEY: ${MODERATION_SERVICE_KEY:-supersecret_moderation_service_key_change_me_in_production}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-decision-1}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_started
+
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:

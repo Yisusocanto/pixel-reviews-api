@@ -17,6 +17,7 @@ from src.modules.likes.models import Like  # noqa: F401
 from src.modules.password_reset_tokens.models import PasswordResetToken  # noqa: F401
 from src.modules.platforms.models import Platform  # noqa: F401
 from src.modules.publisher.models import Publisher  # noqa: F401
+from src.modules.review_moderation.models import ReviewModeration  # noqa: F401
 from src.modules.reviews.models import Review  # noqa: F401
 from src.modules.stores.models import Store  # noqa: F401
 from src.modules.users.models import User  # noqa: F401

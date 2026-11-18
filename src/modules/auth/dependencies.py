@@ -8,7 +8,7 @@ from src.db.database import SessionDep
 from src.modules.auth.security import TOKEN_TYPE_ACCESS, decode_token
 from src.modules.auth.service import AuthService
 from src.modules.users.dependencies import UserRepositoryDep, UserServiceDep
-from src.modules.users.models import User
+from src.modules.users.models import User, UserRole
 
 security_scheme = HTTPBearer(auto_error=True)
 TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(security_scheme)]
@@ -82,6 +82,27 @@ def get_auth_service(
     return AuthService(user_repo=user_repo, user_service=user_service)
 
 
-AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+async def require_admin(user: CurrentUserDep) -> User:
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
 
-__all__ = ["AuthServiceDep", "CurrentUserDep", "OptionalCurrentUserDep", "SessionDep", "TokenDep"]
+    return user
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+AdminDep = Annotated[User, Depends(require_admin)]
+AdminRequiredDep = AdminDep
+
+__all__ = [
+    "AdminDep",
+    "AdminRequiredDep",
+    "AuthServiceDep",
+    "CurrentUserDep",
+    "OptionalCurrentUserDep",
+    "SessionDep",
+    "TokenDep",
+    "require_admin",
+]

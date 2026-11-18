@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:3000"
 
+    RABBITMQ_URL: str = "amqp://pixel:pixel@localhost:5672"
+
+    MODERATION_SERVICE_KEY: str = "supersecret_moderation_service_key_change_me_in_production"
+
     JWT_SECRET_KEY: str = "supersecret_jwt_key_change_me_in_production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
@@ -30,6 +34,10 @@ class Settings(BaseSettings):
     CF_PUBLIC_URL: str
     CF_ACCESS_KEY_ID: str
     CF_SECRET_ACCESS_KEY: str
+
+    MODERATION_SWEEPER_INTERVAL_SECONDS: int = 600
+    MODERATION_SWEEPER_STALE_MINUTES: int = 10
+    MODERATION_SWEEPER_BATCH_SIZE: int = 50
 
     ENVIRONMENT: str = "development"
 

@@ -22,11 +22,14 @@ from src.modules.likes.models import Like
 from src.modules.password_reset_tokens.models import PasswordResetToken
 from src.modules.platforms.models import Platform
 from src.modules.publisher.models import Publisher
+from src.modules.review_moderation.models import ReviewModeration
 from src.modules.reviews.models import Review
 from src.modules.stores.models import Store
 from src.modules.users.models import User
 from src.modules.wishlists.models import Wishlist
 from src.services.mailer.dependencies import get_mailer_service
+from src.services.moderation_producer.dependencies import get_producer_service
+from src.services.moderation_producer.schemas import ModerationPayload
 from src.services.storage.dependencies import get_storage_service
 
 REGISTERED_MODELS = (
@@ -39,6 +42,7 @@ REGISTERED_MODELS = (
     Platform,
     Publisher,
     Review,
+    ReviewModeration,
     Store,
     User,
     Wishlist,
@@ -97,6 +101,15 @@ class FakeStorageService:
         self.uploaded.pop(key, None)
 
 
+class FakeModerationProducer:
+    def __init__(self) -> None:
+        self.published: list[tuple[str, ModerationPayload]] = []
+
+    async def publish(self, routing_key: str, payload: ModerationPayload) -> bool:
+        self.published.append((routing_key, payload))
+        return True
+
+
 @pytest.fixture
 def fake_mailer() -> FakeMailerService:
     return FakeMailerService()
@@ -105,6 +118,11 @@ def fake_mailer() -> FakeMailerService:
 @pytest.fixture
 def fake_storage() -> FakeStorageService:
     return FakeStorageService()
+
+
+@pytest.fixture
+def fake_moderation_producer() -> FakeModerationProducer:
+    return FakeModerationProducer()
 
 
 @pytest.fixture
@@ -134,6 +152,7 @@ async def client(
     db_session: AsyncSession,
     fake_mailer: FakeMailerService,
     fake_storage: FakeStorageService,
+    fake_moderation_producer: FakeModerationProducer,
 ) -> AsyncGenerator[AsyncClient]:
     async def override_get_session() -> AsyncGenerator[AsyncSession]:
         try:
@@ -146,6 +165,7 @@ async def client(
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_mailer_service] = lambda: fake_mailer
     app.dependency_overrides[get_storage_service] = lambda: fake_storage
+    app.dependency_overrides[get_producer_service] = lambda: fake_moderation_producer
     limiter.enabled = False
 
     transport = ASGITransport(app=app)

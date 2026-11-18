@@ -7,25 +7,30 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.comments.models import Comment
 from src.modules.likes.models import Like
-from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
+from src.modules.review_moderation.models import ReviewModeration
+from src.modules.reviews.models import ModerationStatus, Review, ReviewUpdate
 
 
 class ReviewRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, data: ReviewCreate, user_id: uuid.UUID) -> Review:
-        new_review = Review(**data.model_dump(), user_id=user_id)
-        self.session.add(new_review)
-        await self.session.flush()
-        created_review = await self.get_by_id(new_review.id)
-        return created_review or new_review
+    async def create(self, review: Review, user_id: uuid.UUID) -> Review:
+        review.user_id = user_id
+        self.session.add(review)
+        await self.session.commit()
+        created_review = await self.get_by_id(review.id)
+        return created_review or review
 
     async def get_by_id(self, review_id: uuid.UUID) -> Review | None:
         stmt = (
             select(Review)
             .where(Review.id == review_id)
-            .options(selectinload(Review.user), selectinload(Review.game))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.game),
+                selectinload(Review.moderations),
+            )
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -39,7 +44,11 @@ class ReviewRepository:
         stmt = (
             select(Review, likes_count, liked_by_user, comments_count)
             .where(Review.id == review_id)
-            .options(selectinload(Review.user), selectinload(Review.game))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.game),
+                selectinload(Review.moderations),
+            )
         )
         result = await self.session.exec(stmt)
         return result.first()
@@ -57,6 +66,7 @@ class ReviewRepository:
             .options(
                 selectinload(Review.game),
                 selectinload(Review.user),
+                selectinload(Review.moderations),
             )
         )
         result = await self.session.exec(stmt)
@@ -70,16 +80,26 @@ class ReviewRepository:
         game_id: uuid.UUID | None = None,
         current_user_id: uuid.UUID | None = None,
     ) -> list[tuple[Review, int, bool, int]]:
+        if not current_user_id or current_user_id != user_id:
+            filter_rejected = True
+        else:
+            filter_rejected = False
+
         likes_count = self._get_likes_count()
         liked_by_user = self._get_liked_by_user(current_user_id)
         comments_count = self._get_comments_count()
+
         stmt = (
             select(Review, likes_count, liked_by_user, comments_count)
             .where(Review.title != None)
             .order_by(Review.created_at.desc())
             .offset(offset)
             .limit(limit)
-            .options(selectinload(Review.user), selectinload(Review.game))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.game),
+                selectinload(Review.moderations),
+            )
         )
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
@@ -87,19 +107,33 @@ class ReviewRepository:
         if game_id:
             stmt = stmt.where(Review.game_id == game_id)
 
+        if filter_rejected:
+            stmt = stmt.where(Review.moderation_status != ModerationStatus.REJECTED)
+
         result = await self.session.exec(stmt)
         return result.all()
 
     async def count_all(
-        self, user_id: uuid.UUID | None = None, game_id: uuid.UUID | None = None
+        self,
+        user_id: uuid.UUID | None = None,
+        game_id: uuid.UUID | None = None,
+        current_user_id: uuid.UUID | None = None,
     ) -> int:
         """Returns only the number of reviews that have a title and content"""
+        if not current_user_id or current_user_id != user_id:
+            filter_rejected = True
+        else:
+            filter_rejected = False
+
         stmt = select(func.count(Review.id)).where(Review.title != None)
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
 
         if game_id:
             stmt = stmt.where(Review.game_id == game_id)
+
+        if filter_rejected:
+            stmt = stmt.where(Review.moderation_status != ModerationStatus.REJECTED)
 
         result = await self.session.exec(stmt)
         total = result.first()
@@ -128,7 +162,14 @@ class ReviewRepository:
         data = new_data.model_dump(exclude_unset=True)
         review.sqlmodel_update(data)
         self.session.add(review)
-        await self.session.flush()
+        await self.session.commit()
+        updated_review = await self.get_by_id(review.id)
+        return updated_review or review
+
+    async def save_appeal(self, review: Review, moderation: ReviewModeration) -> Review:
+        self.session.add(review)
+        self.session.add(moderation)
+        await self.session.commit()
         updated_review = await self.get_by_id(review.id)
         return updated_review or review
 

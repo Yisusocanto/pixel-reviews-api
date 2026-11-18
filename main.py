@@ -1,7 +1,10 @@
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 
 import httpx
+from aio_pika.exceptions import AMQPError
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
@@ -18,9 +21,13 @@ from src.modules.auth.router import auth_router
 from src.modules.comments.router import router as comments_router
 from src.modules.fav_user_games.router import router as fav_user_games_router
 from src.modules.games.router import router as games_router
+from src.modules.review_moderation.admin_router import router as admin_moderation_router
+from src.modules.review_moderation.router import router as review_moderation_router
+from src.modules.review_moderation.sweeper import run_sweeper_loop
 from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
 from src.modules.wishlists.router import router as wishlists_router
+from src.services.broker.client import Broker
 
 IS_PRODUCTION = settings.ENVIRONMENT == "production"
 
@@ -36,6 +43,23 @@ logger = logging.getLogger("main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    broker = Broker(settings.RABBITMQ_URL)
+    try:
+        await broker.setup_topology()
+    except (AMQPError, OSError, TimeoutError) as exc:
+        logger.warning("[BROKER] Could not initialize topology on startup: %s", exc)
+
+    sweeper_task = asyncio.create_task(
+        run_sweeper_loop(
+            broker=broker,
+            stale_minutes=settings.MODERATION_SWEEPER_STALE_MINUTES,
+            interval_seconds=settings.MODERATION_SWEEPER_INTERVAL_SECONDS,
+            batch_size=settings.MODERATION_SWEEPER_BATCH_SIZE,
+            exchange_name="moderation",
+            routing_key="moderation.review.check",
+        )
+    )
+
     redis_client = Redis.from_url(
         settings.REDIS_URL,
         decode_responses=True,
@@ -46,9 +70,17 @@ async def lifespan(app: FastAPI):
     async with httpx.AsyncClient(timeout=10.0) as http_client:
         app.state.http_client = http_client
         app.state.redis = redis_client
+        app.state.broker = broker
         yield
     await redis_client.aclose()
     await engine.dispose()
+    sweeper_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await sweeper_task
+    try:
+        await broker.close()
+    except (AMQPError, OSError, TimeoutError) as exc:
+        logger.warning("[BROKER] Error closing broker pools: %s", exc)
 
 
 app = FastAPI(
@@ -80,6 +112,8 @@ app.include_router(review_router)
 app.include_router(wishlists_router)
 app.include_router(comments_router)
 app.include_router(fav_user_games_router)
+app.include_router(review_moderation_router)
+app.include_router(admin_moderation_router)
 
 
 @app.get("/health", tags=["Health"])

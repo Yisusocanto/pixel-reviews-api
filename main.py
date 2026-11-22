@@ -19,6 +19,7 @@ from src.db.database import SessionDep, engine
 from src.lib.limiter import limiter
 from src.modules.auth.router import auth_router
 from src.modules.comments.router import router as comments_router
+from src.modules.discover.router import router as discover_router
 from src.modules.fav_user_games.router import router as fav_user_games_router
 from src.modules.games.router import router as games_router
 from src.modules.review_moderation.admin_router import router as admin_moderation_router
@@ -114,6 +115,7 @@ app.include_router(comments_router)
 app.include_router(fav_user_games_router)
 app.include_router(review_moderation_router)
 app.include_router(admin_moderation_router)
+app.include_router(discover_router)
 
 
 @app.get("/health", tags=["Health"])

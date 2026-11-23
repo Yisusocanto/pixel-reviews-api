@@ -69,7 +69,7 @@ class UserService:
             hashed_password=hashed_password,
         )
 
-        return await self.repo.create(new_user)
+        return await self.repo.add(new_user)
 
     async def delete_permanently(self, user_id: uuid.UUID) -> User:
         user = await self.repo.get_user(user_id)
@@ -101,7 +101,7 @@ class UserService:
             hashed_password=None,
         )
 
-        return await self.repo.create(new_user)
+        return await self.repo.add(new_user)
 
     async def update(self, data: UserUpdate, user_id: uuid.UUID) -> User:
         user = await self.repo.get_user(user_id)
@@ -118,7 +118,9 @@ class UserService:
                     detail="Username already in use. choose another",
                 )
 
-        updated_user = await self.repo.update(user, data)
+        updated_fields = data.model_dump(exclude_unset=True)
+        user.sqlmodel_update(updated_fields)
+        updated_user = await self.repo.add(user)
         return updated_user
 
     async def update_password(self, user: User, old_password: str, new_password: str) -> User:
@@ -202,7 +204,7 @@ class UserService:
 
         try:
             await self.storage.upload(
-                new_key, content, content_type, cache_control=IMMUTABLE_CACHE_CONTROL
+                new_key, content, content_type or "", cache_control=IMMUTABLE_CACHE_CONTROL
             )
         except StorageError:
             raise HTTPException(

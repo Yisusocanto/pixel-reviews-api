@@ -105,7 +105,7 @@ class GameService:
         total = await self.repo.count_all()
         total_pages = (total - 1 + limit) // limit if total > 0 else 0
         return GamePagination(
-            items=games,
+            items=list(games),
             total_pages=total_pages,
             page=page,
             total=total,

@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.likes.models import Like
@@ -10,11 +10,11 @@ class LikeRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, review_id: uuid.UUID, user_id: uuid.UUID) -> Like:
-        new_like = Like(review_id=review_id, user_id=user_id)
-        self.session.add(new_like)
+    async def create(self, like: Like) -> Like:
+        self.session.add(like)
         await self.session.flush()
-        return new_like
+        await self.session.refresh(like)
+        return like
 
     async def remove(self, like: Like) -> None:
         await self.session.delete(like)
@@ -36,6 +36,7 @@ class LikeRepository:
         return result.one()
 
     async def count_user_likes(self, user_id: uuid.UUID) -> int:
-        stmt = select(func.count(Like.id)).where(Like.user_id == user_id)
+        stmt = select(func.count(col(Like.id))).where(Like.user_id == user_id)
         result = await self.session.exec(stmt)
-        return result.first()
+        total = result.first()
+        return total if total is not None else 0

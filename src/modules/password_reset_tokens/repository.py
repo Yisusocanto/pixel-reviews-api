@@ -3,19 +3,18 @@ import uuid
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.modules.password_reset_tokens.models import PasswordResetToken, PasswordResetTokenCreate
+from src.modules.password_reset_tokens.models import PasswordResetToken
 
 
 class PasswordResetTokenRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, data: PasswordResetTokenCreate) -> PasswordResetToken:
-        new_token = PasswordResetToken(**data.model_dump())
-        self.session.add(new_token)
+    async def create(self, token: PasswordResetToken) -> PasswordResetToken:
+        self.session.add(token)
         await self.session.flush()
-        await self.session.refresh(new_token)
-        return new_token
+        await self.session.refresh(token)
+        return token
 
     async def delete_all(self, user_id: uuid.UUID):
         stmt = delete(PasswordResetToken).where(PasswordResetToken.user_id == user_id)

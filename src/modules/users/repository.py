@@ -4,14 +4,14 @@ from collections.abc import Sequence
 from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.modules.users.models import User, UserUpdate
+from src.modules.users.models import User
 
 
 class UserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def create(self, user: User) -> User:
+    async def add(self, user: User) -> User:
         self.session.add(user)
         await self.session.flush()
         await self.session.refresh(user)
@@ -82,14 +82,6 @@ class UserRepository:
         result = await self.session.exec(stmt)
         total = result.first()
         return total if total is not None else 0
-
-    async def update(self, user: User, new_data: UserUpdate) -> User:
-        data = new_data.model_dump(exclude_unset=True)
-        user.sqlmodel_update(data)
-        self.session.add(user)
-        await self.session.flush()
-        await self.session.refresh(user)
-        return user
 
     async def update_password(self, user: User, new_password: str) -> User:
         user.hashed_password = new_password

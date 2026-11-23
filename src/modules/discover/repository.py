@@ -17,7 +17,7 @@ class DiscoverRepository:
 
     async def top_rated_games(self, limit: int = 10) -> Sequence[tuple[Game, float, int]]:
         stmt = (
-            select(Game, func.avg(Review.score), func.count(Review.id))
+            select(Game, func.avg(Review.score), func.count(col(Review.id)))
             .join(Review)
             .group_by(col(Game.id))
             .order_by(func.avg(Review.score).desc())
@@ -28,10 +28,10 @@ class DiscoverRepository:
 
     async def top_wanted_games(self, limit: int = 10) -> Sequence[tuple[Game, int]]:
         stmt = (
-            select(Game, func.count(Wishlist.id))
+            select(Game, func.count(col(Wishlist.id)))
             .join(Wishlist)
             .group_by(col(Game.id))
-            .order_by(func.count(Wishlist.id).desc())
+            .order_by(func.count(col(Wishlist.id)).desc())
             .limit(limit)
         )
         result = await self.session.exec(stmt)
@@ -41,10 +41,10 @@ class DiscoverRepository:
         last_week = self._get_last_week_date()
         new_reviews_count = case((Review.created_at >= last_week, 1), else_=0)
         stmt = (
-            select(Game, func.count(Review.id), func.sum(new_reviews_count))
+            select(Game, func.count(col(Review.id)), func.sum(new_reviews_count))
             .join(Review)
             .group_by(col(Game.id))
-            .order_by(func.count(Review.id).desc())
+            .order_by(func.count(col(Review.id)).desc())
             .limit(limit)
         )
         result = await self.session.exec(stmt)
@@ -54,10 +54,10 @@ class DiscoverRepository:
         last_week = self._get_last_week_date()
         new_reviews_count = case((Review.created_at >= last_week, 1), else_=0)
         stmt = (
-            select(User, func.count(Review.id), func.sum(new_reviews_count))
+            select(User, func.count(col(Review.id)), func.sum(new_reviews_count))
             .join(Review)
             .group_by(col(User.id))
-            .order_by(func.count(Review.id).desc())
+            .order_by(func.count(col(Review.id)).desc())
             .limit(limit)
         )
         result = await self.session.exec(stmt)
@@ -67,7 +67,7 @@ class DiscoverRepository:
         last_week = self._get_last_week_date()
         new_reviews_count = case((Review.created_at >= last_week, 1), else_=0)
         stmt = select(
-            func.count(Review.id).label("reviews_count"),
+            func.count(col(Review.id)).label("reviews_count"),
             func.sum(new_reviews_count).label("new_reviews_count"),
         ).where(
             Review.moderation_status != ModerationStatus.REJECTED,

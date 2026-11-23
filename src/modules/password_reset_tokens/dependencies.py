@@ -23,5 +23,5 @@ def get_password_reset_token_service(
 
 
 PasswordResetTokenServiceDep = Annotated[
-    PasswordResetTokenService, Depends(get_password_reset_token_repo)
+    PasswordResetTokenService, Depends(get_password_reset_token_service)
 ]

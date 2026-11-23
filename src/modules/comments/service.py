@@ -39,10 +39,11 @@ class CommentService:
 
         comment = Comment(
             **data.model_dump(),
+            user_id=user_id,
             moderation_status=ModerationStatus.PENDING,
             moderation_enqueued_at=datetime.now(UTC),
         )
-        new_comment = await self.repo.create(comment, user_id)
+        new_comment = await self.repo.add(comment)
 
         payload = ModerationPayload(
             id=new_comment.id,
@@ -140,8 +141,8 @@ class CommentService:
                 comment.content_version,
                 comment.moderation_status,
             )
-
-        updated_comment = await self.repo.update(comment, new_data)
+        comment.sqlmodel_update(updated_data)
+        updated_comment = await self.repo.add(comment)
         return self._to_comment_response(updated_comment, user_id)
 
     async def appeal(self, comment_id: uuid.UUID, user_id: uuid.UUID) -> CommentResponse:

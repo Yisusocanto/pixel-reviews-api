@@ -54,7 +54,8 @@ class ReviewService:
             )
 
         try:
-            new_review = await self.repo.create(review, user_id)
+            review.user_id = user_id
+            new_review = await self.repo.add(review)
         except IntegrityError:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -256,7 +257,8 @@ class ReviewService:
                     review.moderation_status,
                 )
 
-        return await self.repo.update(review, data)
+        review.sqlmodel_update(updated_fields)
+        return await self.repo.add(review)
 
     async def appeal(self, review_id: uuid.UUID, user_id: uuid.UUID) -> ReviewResponse:
         review = await self.repo.get_by_id(review_id)
@@ -301,7 +303,7 @@ class ReviewService:
         review.moderation_reason = moderation_reason
         review.moderated_version = moderation_version
         review.moderation_status = moderation_status
-        await self.repo.update(review, ReviewUpdate())
+        await self.repo.add(review)
 
     async def game_stats(self, game_id: uuid.UUID):
         total = await self.repo.count_all_ratings(game_id=game_id)

@@ -1,14 +1,15 @@
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import exists, literal
 from sqlalchemy.orm import selectinload
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.comments.models import Comment
 from src.modules.likes.models import Like
 from src.modules.review_moderation.models import ReviewModeration
-from src.modules.reviews.models import Review, ReviewUpdate
+from src.modules.reviews.models import Review
 from src.schemas.moderation import ModerationStatus
 
 
@@ -16,8 +17,7 @@ class ReviewRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, review: Review, user_id: uuid.UUID) -> Review:
-        review.user_id = user_id
+    async def add(self, review: Review) -> Review:
         self.session.add(review)
         await self.session.commit()
         created_review = await self.get_by_id(review.id)
@@ -80,7 +80,7 @@ class ReviewRepository:
         user_id: uuid.UUID | None = None,
         game_id: uuid.UUID | None = None,
         current_user_id: uuid.UUID | None = None,
-    ) -> list[tuple[Review, int, bool, int]]:
+    ) -> Sequence[tuple[Review, int, bool, int]]:
         if not current_user_id or current_user_id != user_id:
             filter_rejected = True
         else:
@@ -93,7 +93,7 @@ class ReviewRepository:
         stmt = (
             select(Review, likes_count, liked_by_user, comments_count)
             .where(Review.title != None)
-            .order_by(Review.created_at.desc())
+            .order_by(col(Review.created_at).desc())
             .offset(offset)
             .limit(limit)
             .options(
@@ -126,7 +126,7 @@ class ReviewRepository:
         else:
             filter_rejected = False
 
-        stmt = select(func.count(Review.id)).where(Review.title != None)
+        stmt = select(func.count(col(Review.id))).where(Review.title != None)
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
 
@@ -143,7 +143,7 @@ class ReviewRepository:
     async def count_all_ratings(
         self, user_id: uuid.UUID | None = None, game_id: uuid.UUID | None = None
     ) -> int:
-        stmt = select(func.count(Review.id))
+        stmt = select(func.count(col(Review.id)))
         if user_id:
             stmt = stmt.where(Review.user_id == user_id)
 
@@ -158,14 +158,6 @@ class ReviewRepository:
         await self.session.delete(review)
         await self.session.flush()
         return review
-
-    async def update(self, review: Review, new_data: ReviewUpdate) -> Review:
-        data = new_data.model_dump(exclude_unset=True)
-        review.sqlmodel_update(data)
-        self.session.add(review)
-        await self.session.commit()
-        updated_review = await self.get_by_id(review.id)
-        return updated_review or review
 
     async def save_appeal(self, review: Review, moderation: ReviewModeration) -> Review:
         self.session.add(review)
@@ -186,18 +178,18 @@ class ReviewRepository:
 
     async def get_score_distribution(self, game_id: uuid.UUID):
         stmt = (
-            select(Review.score, func.count(Review.score))
+            select(Review.score, func.count(col(Review.score)))
             .where(Review.game_id == game_id)
-            .group_by(Review.score)
+            .group_by(col(Review.score))
         )
         result = await self.session.exec(stmt)
         return result.all()
 
     async def get_user_score_distribution(self, user_id: uuid.UUID):
         stmt = (
-            select(Review.score, func.count(Review.score))
+            select(Review.score, func.count(col(Review.score)))
             .where(Review.user_id == user_id)
-            .group_by(Review.score)
+            .group_by(col(Review.score))
         )
         result = await self.session.exec(stmt)
         return result.all()

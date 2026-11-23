@@ -1,22 +1,23 @@
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy.orm import selectinload
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel.sql.expression import col
 
-from src.modules.wishlists.models import Wishlist, WishlistCreate
+from src.modules.wishlists.models import Wishlist
 
 
 class WishlistRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, data: WishlistCreate, user_id: uuid.UUID) -> Wishlist:
-        new_wishlist_item = Wishlist(**data.model_dump(), user_id=user_id)
-        self.session.add(new_wishlist_item)
+    async def create(self, wishlist_item: Wishlist) -> Wishlist:
+        self.session.add(wishlist_item)
         await self.session.flush()
-        wishlist = await self.get_by_id(new_wishlist_item.id)
-        return wishlist or new_wishlist_item
+        wishlist = await self.get_by_id(wishlist_item.id)
+        return wishlist or wishlist_item
 
     async def get_by_id(self, wishlist_id: uuid.UUID) -> Wishlist | None:
         stmt = (
@@ -39,7 +40,7 @@ class WishlistRepository:
         await self.session.delete(wishlist)
         return wishlist
 
-    async def get_all(self, offset: int, limit: int, user_id: uuid.UUID) -> list[Wishlist]:
+    async def get_all(self, offset: int, limit: int, user_id: uuid.UUID) -> Sequence[Wishlist]:
         stmt = (
             select(Wishlist)
             .where(Wishlist.user_id == user_id)
@@ -56,7 +57,7 @@ class WishlistRepository:
     async def count_all(
         self, user_id: uuid.UUID | None = None, game_id: uuid.UUID | None = None
     ) -> int:
-        stmt = select(func.count(Wishlist.id))
+        stmt = select(func.count(col(Wishlist.id)))
         if user_id:
             stmt = stmt.where(Wishlist.user_id == user_id)
         if game_id:

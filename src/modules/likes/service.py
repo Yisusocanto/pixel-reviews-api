@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import HTTPException, status
 
+from src.modules.likes.models import Like
 from src.modules.likes.repository import LikeRepository
 from src.modules.reviews.service import ReviewService
 
@@ -18,7 +19,8 @@ class LikeService:
 
         existing_like = await self.repo.get_user_review_like(user_id=user_id, review_id=review_id)
         if not existing_like:
-            await self.repo.create(review_id=review_id, user_id=user_id)
+            like = Like(review_id=review_id, user_id=user_id)
+            await self.repo.create(like)
             liked = True
         else:
             await self.repo.remove(existing_like)

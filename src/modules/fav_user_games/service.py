@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 
 from fastapi import HTTPException
 
@@ -29,6 +30,6 @@ class FavUserGameService:
         await self.repo.add_games(fav_games)
         return games
 
-    async def get_all(self, user_id: uuid.UUID) -> list[Game]:
+    async def get_all(self, user_id: uuid.UUID) -> Sequence[Game]:
         games = await self.repo.get_all(user_id)
         return games

@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.comment_moderation.models import CommentModeration
@@ -45,7 +45,7 @@ class CommentModerationRepository:
             select(CommentModeration)
             .where(CommentModeration.comment_id == comment_id)
             .options(selectinload(CommentModeration.admin))
-            .order_by(CommentModeration.created_at.desc())
+            .order_by(col(CommentModeration.created_at).desc())
         )
         result = await self.session.exec(stmt)
         return list(result.all())
@@ -68,7 +68,7 @@ class CommentModerationRepository:
             .offset(offset)
             .limit(limit)
         )
-        count_stmt = select(func.count(Comment.id))
+        count_stmt = select(func.count(col(Comment.id)))
 
         if status_filter is not None:
             stmt = stmt.where(Comment.moderation_status == status_filter)

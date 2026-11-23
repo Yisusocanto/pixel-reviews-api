@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import func, or_, select
+from sqlmodel import col, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.review_moderation.models import ReviewModeration
@@ -43,7 +43,7 @@ class ReviewModerationRepository:
             select(ReviewModeration)
             .where(ReviewModeration.review_id == review_id)
             .options(selectinload(ReviewModeration.admin))
-            .order_by(ReviewModeration.created_at.desc())
+            .order_by(col(ReviewModeration.created_at).desc())
         )
         result = await self.session.exec(stmt)
         return list(result.all())
@@ -54,7 +54,7 @@ class ReviewModerationRepository:
         offset: int,
         limit: int,
     ) -> tuple[list[Review], int]:
-        base_condition = or_(Review.title.is_not(None), Review.content.is_not(None))
+        base_condition = or_(col(Review.title).is_not(None), col(Review.content).is_not(None))
 
         stmt = (
             select(Review)
@@ -64,11 +64,11 @@ class ReviewModerationRepository:
                 selectinload(Review.game),
                 selectinload(Review.moderations).selectinload(ReviewModeration.admin),
             )
-            .order_by(Review.updated_at.desc(), Review.created_at.desc())
+            .order_by(col(Review.updated_at).desc(), col(Review.created_at).desc())
             .offset(offset)
             .limit(limit)
         )
-        count_stmt = select(func.count(Review.id)).where(base_condition)
+        count_stmt = select(func.count(col(Review.id))).where(base_condition)
 
         if status_filter is not None:
             stmt = stmt.where(Review.moderation_status == status_filter)

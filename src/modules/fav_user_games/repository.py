@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -21,7 +22,7 @@ class FavUserGameRepository:
         result = await self.session.exec(stmt)
         return result.rowcount
 
-    async def get_all(self, user_id: uuid.UUID) -> list[Game]:
+    async def get_all(self, user_id: uuid.UUID) -> Sequence[Game]:
         stmt = select(Game).join(FavUserGame).where(FavUserGame.user_id == user_id)
         result = await self.session.exec(stmt)
         return result.all()

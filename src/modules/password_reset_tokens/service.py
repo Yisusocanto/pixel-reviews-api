@@ -9,7 +9,8 @@ class PasswordResetTokenService:
         self.repo = repo
 
     async def create(self, data: PasswordResetTokenCreate) -> PasswordResetToken:
-        return await self.repo.create(data)
+        token = PasswordResetToken(**data.model_dump())
+        return await self.repo.create(token)
 
     async def delete_all(self, user_id: uuid.UUID):
         return await self.repo.delete_all(user_id)

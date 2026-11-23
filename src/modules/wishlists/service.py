@@ -1,6 +1,6 @@
 import uuid
 
-from src.modules.wishlists.models import WishlistCreate
+from src.modules.wishlists.models import Wishlist, WishlistCreate
 from src.modules.wishlists.repository import WishlistRepository
 from src.modules.wishlists.schemas import InUserWishlist, WishlistPagination
 
@@ -12,7 +12,8 @@ class WishlistService:
     async def toggle(self, data: WishlistCreate, user_id: uuid.UUID) -> InUserWishlist:
         existing_wishlist = await self.repo.get_wishlist_item(user_id=user_id, game_id=data.game_id)
         if not existing_wishlist:
-            new_wishlist_item = await self.repo.create(data, user_id)
+            wishlist_item = Wishlist(**data.model_dump(), user_id=user_id)
+            new_wishlist_item = await self.repo.create(wishlist_item)
             return InUserWishlist(in_wishlist=True, wishlist_id=new_wishlist_item.id)
 
         await self.repo.remove(existing_wishlist)
@@ -32,7 +33,7 @@ class WishlistService:
         total_pages = (total - 1 + limit) // limit
 
         return WishlistPagination(
-            items=wishlists,
+            items=list(wishlists),
             total_pages=total_pages,
             total=total,
             page=page,

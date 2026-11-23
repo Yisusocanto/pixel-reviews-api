@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.developers.models import Developer, GameDeveloperLink
@@ -126,7 +126,7 @@ class GameRepository:
         return result.all()
 
     async def count_all(self) -> int:
-        stmt = select(func.count(Game.id))
+        stmt = select(func.count(col(Game.id)))
         result = await self.session.exec(stmt)
         total = result.first()
         return total if total is not None else 0

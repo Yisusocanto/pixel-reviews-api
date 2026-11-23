@@ -1,5 +1,4 @@
 import uuid
-from enum import StrEnum
 from typing import TYPE_CHECKING, Optional
 
 from pydantic import ConfigDict
@@ -8,24 +7,11 @@ from sqlalchemy import JSON, Column, String
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
+from src.schemas.moderation import Judge, Verdict
 
 if TYPE_CHECKING:
     from src.modules.reviews.models import Review
     from src.modules.users.models import User
-
-
-class Verdict(StrEnum):
-    APPROVE = "approve"
-    REJECT = "reject"
-    DOUBT = "doubt"
-
-
-class Judge(StrEnum):
-    RULES = "rules"
-    AI_MODEL = "ai_model"
-    ADMIN = "admin"
-    SYSTEM = "system"
-    USER_APPEAL = "user_appeal"
 
 
 class ReviewModerationBase(SQLModel):

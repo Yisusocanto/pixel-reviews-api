@@ -5,9 +5,10 @@ from sqlmodel import case, col, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.games.models import Game
-from src.modules.reviews.models import ModerationStatus, Review
+from src.modules.reviews.models import Review
 from src.modules.users.models import User
 from src.modules.wishlists.models import Wishlist
+from src.schemas.moderation import ModerationStatus
 
 
 class DiscoverRepository:

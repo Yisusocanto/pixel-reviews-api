@@ -6,12 +6,11 @@ from fastapi import APIRouter, Depends, Query
 from src.modules.auth.dependencies import AdminDep, require_admin
 from src.modules.review_moderation.dependencies import ReviewModerationServiceDep
 from src.modules.review_moderation.schemas import (
-    AdminDecisionRequest,
     AdminModerationQueuePagination,
     AdminModerationReviewItem,
     ReviewModerationHistoryItem,
 )
-from src.modules.reviews.models import ModerationStatus
+from src.schemas.moderation import AdminDecisionRequest, ModerationStatus
 
 router = APIRouter(
     prefix="/admin/moderation",

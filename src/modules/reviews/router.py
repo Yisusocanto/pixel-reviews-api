@@ -96,6 +96,13 @@ async def get_review_comments(
     review_id: uuid.UUID,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1)] = 10,
+    current_user: OptionalCurrentUserDep = None,
 ):
     review = await service.get_by_id(review_id)
-    return await comments_service.get_all(page=page, limit=limit, review_id=review.id)
+    current_user_id = current_user.id if current_user else None
+    return await comments_service.get_all(
+        page=page,
+        limit=limit,
+        review_id=review.id,
+        current_user_id=current_user_id,
+    )

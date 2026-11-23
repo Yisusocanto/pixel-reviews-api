@@ -16,6 +16,7 @@ from src.modules.review_moderation.models import ReviewModeration
 from src.schemas.config_base import ConfigBase
 
 if TYPE_CHECKING:
+    from src.modules.comment_moderation.models import CommentModeration
     from src.modules.comments.models import Comment
     from src.modules.games.models import Game
     from src.modules.likes.models import Like
@@ -70,6 +71,9 @@ class User(UserBase, TimestampMixin, table=True):
         link_model=FavUserGame,
     )
     moderations: list["ReviewModeration"] = Relationship(  # noqa: UP037
+        back_populates="admin",
+    )
+    comment_moderations: list["CommentModeration"] = Relationship(  # noqa: UP037
         back_populates="admin",
     )
 

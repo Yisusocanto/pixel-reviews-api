@@ -8,10 +8,11 @@ from sqlalchemy.exc import IntegrityError
 from src.modules.games.schemas import GameStats
 from src.modules.games.service import GameService
 from src.modules.review_moderation.models import Judge, ReviewModeration, Verdict
-from src.modules.reviews.models import ModerationStatus, Review, ReviewCreate, ReviewUpdate
+from src.modules.reviews.models import Review, ReviewCreate, ReviewUpdate
 from src.modules.reviews.repository import ReviewRepository
 from src.modules.reviews.schemas import ReviewPagination, ReviewResponse
 from src.modules.users.schemas import UserReviewStats
+from src.schemas.moderation import ModerationStatus
 from src.services.moderation_producer.client import ModerationProducer
 from src.services.moderation_producer.schemas import ModerationPayload, ModerationType
 

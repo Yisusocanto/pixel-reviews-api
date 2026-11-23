@@ -14,6 +14,7 @@ from main import app
 from src.core.settings import settings
 from src.db.database import get_session
 from src.lib.limiter import limiter
+from src.modules.comment_moderation.models import CommentModeration
 from src.modules.comments.models import Comment
 from src.modules.developers.models import Developer
 from src.modules.games.models import Game
@@ -34,6 +35,7 @@ from src.services.storage.dependencies import get_storage_service
 
 REGISTERED_MODELS = (
     Comment,
+    CommentModeration,
     Developer,
     Game,
     Genre,

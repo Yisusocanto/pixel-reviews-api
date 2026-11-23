@@ -18,13 +18,16 @@ from src.core.settings import settings
 from src.db.database import SessionDep, engine
 from src.lib.limiter import limiter
 from src.modules.auth.router import auth_router
+from src.modules.comment_moderation.admin_router import (
+    router as admin_comment_moderation_router,
+)
 from src.modules.comments.router import router as comments_router
 from src.modules.discover.router import router as discover_router
 from src.modules.fav_user_games.router import router as fav_user_games_router
 from src.modules.games.router import router as games_router
+from src.modules.moderation.router import router as moderation_router
+from src.modules.moderation.sweeper import run_sweeper_loop
 from src.modules.review_moderation.admin_router import router as admin_moderation_router
-from src.modules.review_moderation.router import router as review_moderation_router
-from src.modules.review_moderation.sweeper import run_sweeper_loop
 from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
 from src.modules.wishlists.router import router as wishlists_router
@@ -57,7 +60,8 @@ async def lifespan(app: FastAPI):
             interval_seconds=settings.MODERATION_SWEEPER_INTERVAL_SECONDS,
             batch_size=settings.MODERATION_SWEEPER_BATCH_SIZE,
             exchange_name="moderation",
-            routing_key="moderation.review.check",
+            review_routing_key="moderation.review.check",
+            comment_routing_key="moderation.comment.check",
         )
     )
 
@@ -113,8 +117,9 @@ app.include_router(review_router)
 app.include_router(wishlists_router)
 app.include_router(comments_router)
 app.include_router(fav_user_games_router)
-app.include_router(review_moderation_router)
+app.include_router(moderation_router)
 app.include_router(admin_moderation_router)
+app.include_router(admin_comment_moderation_router)
 app.include_router(discover_router)
 
 

@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
@@ -9,6 +8,7 @@ from sqlalchemy import CheckConstraint, DateTime, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.core.mixins import TimestampMixin
+from src.schemas.moderation import ModerationStatus
 
 if TYPE_CHECKING:
     from src.modules.comments.models import Comment
@@ -16,13 +16,6 @@ if TYPE_CHECKING:
     from src.modules.likes.models import Like
     from src.modules.review_moderation.models import ReviewModeration
     from src.modules.users.models import User
-
-
-class ModerationStatus(StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    NEEDS_REVIEW = "needs_review"
-    REJECTED = "rejected"
 
 
 class ReviewBase(SQLModel):

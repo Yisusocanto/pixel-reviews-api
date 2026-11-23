@@ -2,25 +2,25 @@ import uuid
 
 from fastapi import HTTPException, status
 
-from src.modules.review_moderation.models import Judge, ReviewModeration, Verdict
+from src.modules.review_moderation.models import ReviewModeration
 from src.modules.review_moderation.repository import ReviewModerationRepository
 from src.modules.review_moderation.schemas import (
-    AdminDecisionRequest,
     AdminModerationQueuePagination,
     AdminModerationReviewItem,
-    ModerationVerdictRequest,
-    ModerationVerdictResult,
     ReviewModerationHistoryItem,
 )
-from src.modules.reviews.models import ModerationStatus, Review
+from src.modules.reviews.models import Review
 from src.modules.reviews.service import ReviewService
 from src.modules.users.models import User
-
-rules = {
-    Verdict.REJECT: ModerationStatus.REJECTED,
-    Verdict.APPROVE: ModerationStatus.APPROVED,
-    Verdict.DOUBT: ModerationStatus.NEEDS_REVIEW,
-}
+from src.schemas.moderation import (
+    VERDICT_STATUS_MAP,
+    AdminDecisionRequest,
+    Judge,
+    ModerationStatus,
+    ModerationVerdictRequest,
+    ModerationVerdictResult,
+    Verdict,
+)
 
 
 class ReviewModerationService:
@@ -38,7 +38,9 @@ class ReviewModerationService:
 
         review.moderation_reason = data.reason if data.verdict != Verdict.APPROVE else None
         review.moderated_version = data.version
-        review.moderation_status = rules.get(data.verdict, ModerationStatus.NEEDS_REVIEW)
+        review.moderation_status = VERDICT_STATUS_MAP.get(
+            data.verdict, ModerationStatus.NEEDS_REVIEW
+        )
 
         moderation = ReviewModeration(
             review_id=data.id,

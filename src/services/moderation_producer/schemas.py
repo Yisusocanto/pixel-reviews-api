@@ -6,6 +6,7 @@ from src.schemas.config_base import ConfigBase
 
 class ModerationType(StrEnum):
     REVIEW = "review"
+    COMMENT = "comment"
 
 
 class ModerationPayload(ConfigBase):

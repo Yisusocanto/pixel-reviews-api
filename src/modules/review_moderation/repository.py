@@ -5,7 +5,8 @@ from sqlmodel import func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.modules.review_moderation.models import ReviewModeration
-from src.modules.reviews.models import ModerationStatus, Review
+from src.modules.reviews.models import Review
+from src.schemas.moderation import ModerationStatus
 
 
 class ReviewModerationRepository:

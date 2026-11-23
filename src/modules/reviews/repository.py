@@ -8,7 +8,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.modules.comments.models import Comment
 from src.modules.likes.models import Like
 from src.modules.review_moderation.models import ReviewModeration
-from src.modules.reviews.models import ModerationStatus, Review, ReviewUpdate
+from src.modules.reviews.models import Review, ReviewUpdate
+from src.schemas.moderation import ModerationStatus
 
 
 class ReviewRepository:
@@ -225,7 +226,10 @@ class ReviewRepository:
         comments_count = (
             select(func.count())
             .select_from(Comment)
-            .where(Comment.review_id == Review.id)
+            .where(
+                Comment.review_id == Review.id,
+                Comment.moderation_status != ModerationStatus.REJECTED,
+            )
             .scalar_subquery()
             .label("comments_count")
         )

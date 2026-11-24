@@ -260,6 +260,15 @@ class ReviewService:
         review.sqlmodel_update(updated_fields)
         return await self.repo.add(review)
 
+    async def update_moderation_status(
+        self, review: Review, new_status: ModerationStatus
+    ) -> Review:
+        if review.moderation_status == new_status:
+            return review
+
+        review.moderation_status = new_status
+        return await self.repo.add(review)
+
     async def appeal(self, review_id: uuid.UUID, user_id: uuid.UUID) -> ReviewResponse:
         review = await self.repo.get_by_id(review_id)
         if not review:

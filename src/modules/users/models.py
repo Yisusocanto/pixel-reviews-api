@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from src.modules.comments.models import Comment
     from src.modules.games.models import Game
     from src.modules.likes.models import Like
+    from src.modules.reports.models import Report
     from src.modules.reviews.models import Review
     from src.modules.wishlists.models import Wishlist
 
@@ -75,6 +76,9 @@ class User(UserBase, TimestampMixin, table=True):
     )
     comment_moderations: list["CommentModeration"] = Relationship(  # noqa: UP037
         back_populates="admin",
+    )
+    reports: list["Report"] = Relationship(  # noqa: UP037
+        back_populates="reporter", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 

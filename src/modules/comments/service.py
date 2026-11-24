@@ -145,6 +145,15 @@ class CommentService:
         updated_comment = await self.repo.add(comment)
         return self._to_comment_response(updated_comment, user_id)
 
+    async def update_moderation_status(
+        self, comment: Comment, new_status: ModerationStatus
+    ) -> Comment:
+        if comment.moderation_status == new_status:
+            return comment
+
+        comment.moderation_status = new_status
+        return await self.repo.add(comment)
+
     async def appeal(self, comment_id: uuid.UUID, user_id: uuid.UUID) -> CommentResponse:
         comment = await self.get_by_id(comment_id)
         if comment.user_id != user_id:

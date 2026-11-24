@@ -27,6 +27,8 @@ from src.modules.fav_user_games.router import router as fav_user_games_router
 from src.modules.games.router import router as games_router
 from src.modules.moderation.router import router as moderation_router
 from src.modules.moderation.sweeper import run_sweeper_loop
+from src.modules.reports.admin_router import router as admin_report_router
+from src.modules.reports.router import router as report_router
 from src.modules.review_moderation.admin_router import router as admin_moderation_router
 from src.modules.reviews.router import router as review_router
 from src.modules.users.router import router as users_router
@@ -121,6 +123,8 @@ app.include_router(moderation_router)
 app.include_router(admin_moderation_router)
 app.include_router(admin_comment_moderation_router)
 app.include_router(discover_router)
+app.include_router(report_router)
+app.include_router(admin_report_router)
 
 
 @app.get("/health", tags=["Health"])

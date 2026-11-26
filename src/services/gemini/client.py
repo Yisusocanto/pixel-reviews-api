@@ -12,6 +12,29 @@ from src.core.settings import settings
 
 logger = logging.getLogger("gemini_service")
 
+RETRYABLE_STATUS_CODES = {404, 429, 503}
+
+TEXT_MODEL_FALLBACKS = (
+    "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview",
+    "gemini-flash-latest",
+)
+
+TTS_MODEL_FALLBACKS = (
+    "gemini-3.8-flash-tts",
+    "gemini-2.5-flash-preview-tts",
+    "gemini-3.1-flash-tts-preview",
+)
+
+
+def _build_candidate_models(primary: str, fallbacks: tuple[str, ...]) -> list[str]:
+    ordered: list[str] = []
+    for candidate in (primary, *fallbacks):
+        cleaned = candidate.strip()
+        if cleaned and cleaned not in ordered:
+            ordered.append(cleaned)
+    return ordered
+
 
 def pcm_to_wav_bytes(
     pcm_data: bytes,
@@ -52,6 +75,56 @@ class GeminiService:
                 detail="GEMINI_API_KEY is not configured on the server",
             )
 
+    async def _post_with_fallback(
+        self,
+        models: list[str],
+        payload: dict[str, Any],
+        timeout: float,
+    ) -> tuple[dict[str, Any], str]:
+        last_status = 502
+        last_body = ""
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            for model_name in models:
+                endpoint = f"{self.base_url}/models/{model_name}:generateContent"
+                response = await client.post(
+                    endpoint,
+                    params={"key": self.api_key},
+                    json=payload,
+                )
+                if response.status_code < 400:
+                    return response.json(), model_name
+
+                last_status = response.status_code
+                last_body = response.text[:400]
+                if response.status_code in RETRYABLE_STATUS_CODES:
+                    logger.warning(
+                        "[GEMINI] Model %s returned %s; trying fallback",
+                        model_name,
+                        response.status_code,
+                    )
+                    continue
+
+                logger.error(
+                    "[GEMINI] Request failed on %s (%s): %s",
+                    model_name,
+                    response.status_code,
+                    last_body,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Gemini API error ({response.status_code})",
+                )
+
+        logger.error(
+            "[GEMINI] All candidate models failed (last=%s): %s",
+            last_status,
+            last_body,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Gemini API error ({last_status})",
+        )
+
     async def generate_structured_json(
         self,
         prompt: str,
@@ -61,8 +134,7 @@ class GeminiService:
         temperature: float = 0.8,
     ) -> dict[str, Any]:
         self._ensure_configured()
-        target_model = model or self.creative_model
-        endpoint = f"{self.base_url}/models/{target_model}:generateContent"
+        models = _build_candidate_models(model or self.creative_model, TEXT_MODEL_FALLBACKS)
 
         payload: dict[str, Any] = {
             "systemInstruction": {
@@ -81,25 +153,8 @@ class GeminiService:
             },
         }
 
-        async with httpx.AsyncClient(timeout=75.0) as client:
-            response = await client.post(
-                endpoint,
-                params={"key": self.api_key},
-                json=payload,
-            )
-
-        if response.status_code >= 400:
-            logger.error(
-                "[GEMINI] Structured generation failed (%s): %s",
-                response.status_code,
-                response.text[:400],
-            )
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Gemini API error ({response.status_code})",
-            )
-
-        body = response.json()
+        body, used_model = await self._post_with_fallback(models, payload, timeout=75.0)
+        logger.info("[GEMINI] Generated structured JSON via %s", used_model)
         try:
             text_output = body["candidates"][0]["content"]["parts"][0]["text"]
             return json.loads(text_output)
@@ -107,7 +162,7 @@ class GeminiService:
             logger.exception("[GEMINI] Invalid structured JSON response")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Invalid structured response from Gemini Pro",
+                detail="Invalid structured response from Gemini",
             ) from exc
 
     async def generate_studio_tts(
@@ -118,7 +173,7 @@ class GeminiService:
     ) -> tuple[bytes, float]:
         self._ensure_configured()
         selected_voice = voice_name or self.default_voice
-        endpoint = f"{self.base_url}/models/{self.tts_model}:generateContent"
+        models = _build_candidate_models(self.tts_model, TTS_MODEL_FALLBACKS)
 
         directed_prompt = (
             f"Voice direction: {voice_direction.strip()}\n\n"
@@ -143,25 +198,9 @@ class GeminiService:
             },
         }
 
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            response = await client.post(
-                endpoint,
-                params={"key": self.api_key},
-                json=payload,
-            )
-
-        if response.status_code >= 400:
-            logger.error(
-                "[GEMINI] TTS generation failed (%s): %s",
-                response.status_code,
-                response.text[:400],
-            )
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Gemini TTS error ({response.status_code})",
-            )
-
-        body = response.json()
+        body, used_model = await self._post_with_fallback(models, payload, timeout=90.0)
+        self.tts_model = used_model
+        logger.info("[GEMINI] Synthesized studio TTS via %s (%s)", used_model, selected_voice)
         try:
             inline_data = body["candidates"][0]["content"]["parts"][0]["inlineData"]
             pcm_bytes = base64.b64decode(inline_data["data"])
@@ -169,7 +208,7 @@ class GeminiService:
             logger.exception("[GEMINI] Missing inlineData audio in TTS response")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Invalid audio payload from Gemini Pro TTS",
+                detail="Invalid audio payload from Gemini TTS",
             ) from exc
 
         wav_bytes = pcm_to_wav_bytes(pcm_bytes, sample_rate=24000, channels=1, bit_depth=16)

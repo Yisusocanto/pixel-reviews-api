@@ -100,6 +100,8 @@ class SocialStudioRepository:
             .options(
                 selectinload(Review.user),
                 selectinload(Review.game).selectinload(Game.genres),
+                selectinload(Review.game).selectinload(Game.developers),
+                selectinload(Review.game).selectinload(Game.platforms),
             )
             .order_by(likes_count.desc(), col(Review.created_at).desc())
             .limit(limit)
@@ -133,6 +135,8 @@ class SocialStudioRepository:
             .options(
                 selectinload(Review.user),
                 selectinload(Review.game).selectinload(Game.genres),
+                selectinload(Review.game).selectinload(Game.developers),
+                selectinload(Review.game).selectinload(Game.platforms),
             )
         )
         result = await self.session.exec(stmt)

@@ -6,6 +6,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import inspect as sa_inspect
 
 from src.core.settings import settings
 from src.modules.games.models import Game
@@ -427,6 +428,11 @@ class SocialStudioService:
 
     @staticmethod
     def _serialize_game_assets(game: Game) -> dict[str, Any]:
+        unloaded = sa_inspect(game).unloaded
+        genres = [] if "genres" in unloaded else [g.name for g in (game.genres or [])]
+        developers = [] if "developers" in unloaded else [d.name for d in (game.developers or [])]
+        platforms = [] if "platforms" in unloaded else [p.name for p in (game.platforms or [])]
+
         screenshots = [
             converted
             for s in (game.screenshots or [])[:5]
@@ -442,9 +448,9 @@ class SocialStudioService:
             "release_year": game.release_date.year if game.release_date else None,
             "description": (game.description or "")[:600],
             "critic_score": game.critic_score,
-            "genres": [g.name for g in (game.genres or [])],
-            "developers": [d.name for d in (game.developers or [])],
-            "platforms": [p.name for p in (game.platforms or [])],
+            "genres": genres,
+            "developers": developers,
+            "platforms": platforms,
             "cover_url": to_hd_jpg_url(game.image_url, "t_cover_big_2x"),
             "backdrop_url": backdrop,
             "screenshots": screenshots,

@@ -40,6 +40,8 @@ class GameBase(SQLModel):
     background_image: str | None = None
     description: str = ""
     storyline: str | None = None
+    description_es: str | None = None
+    storyline_es: str | None = None
     critic_score: int | None = None
     critic_score_count: int | None = None
     igdb_url: str | None = None

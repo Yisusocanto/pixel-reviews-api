@@ -16,8 +16,8 @@ RETRYABLE_STATUS_CODES = {404, 429, 503}
 
 TEXT_MODEL_FALLBACKS = (
     "gemini-3-flash-preview",
-    "gemini-3.1-pro-preview",
-    "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
 )
 
 TTS_MODEL_FALLBACKS = (
@@ -86,11 +86,31 @@ class GeminiService:
         async with httpx.AsyncClient(timeout=timeout) as client:
             for model_name in models:
                 endpoint = f"{self.base_url}/models/{model_name}:generateContent"
-                response = await client.post(
-                    endpoint,
-                    params={"key": self.api_key},
-                    json=payload,
-                )
+                try:
+                    response = await client.post(
+                        endpoint,
+                        params={"key": self.api_key},
+                        json=payload,
+                    )
+                except httpx.TimeoutException:
+                    last_status = 504
+                    last_body = f"Timeout calling {model_name}"
+                    logger.warning(
+                        "[GEMINI] Model %s timed out after %.1fs; trying fallback",
+                        model_name,
+                        timeout,
+                    )
+                    continue
+                except httpx.HTTPError as exc:
+                    last_status = 502
+                    last_body = str(exc)[:400]
+                    logger.warning(
+                        "[GEMINI] Network error on %s (%s); trying fallback",
+                        model_name,
+                        exc,
+                    )
+                    continue
+
                 if response.status_code < 400:
                     return response.json(), model_name
 
@@ -153,7 +173,7 @@ class GeminiService:
             },
         }
 
-        body, used_model = await self._post_with_fallback(models, payload, timeout=75.0)
+        body, used_model = await self._post_with_fallback(models, payload, timeout=35.0)
         logger.info("[GEMINI] Generated structured JSON via %s", used_model)
         try:
             text_output = body["candidates"][0]["content"]["parts"][0]["text"]

@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     GOOGLE_CLIENT_ID: str = ""
+    GEMINI_API_KEY: str = ""
+    GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1beta"
+    GEMINI_CREATIVE_MODEL: str = "gemini-3.1-pro-preview"
+    GEMINI_TTS_MODEL: str = "gemini-3.8-flash-tts"
+    GEMINI_TTS_VOICE: str = "Orus"
+    GEMINI_TRANSLATION_MODEL: str = "gemini-3-flash-preview"
     RESEND_API_KEY: str = ""
     RESEND_DOMAIN: str = "onboarding@resend.dev"
 

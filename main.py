@@ -25,12 +25,15 @@ from src.modules.comments.router import router as comments_router
 from src.modules.discover.router import router as discover_router
 from src.modules.fav_user_games.router import router as fav_user_games_router
 from src.modules.games.router import router as games_router
+from src.modules.genres.router import router as genres_router
 from src.modules.moderation.router import router as moderation_router
 from src.modules.moderation.sweeper import run_sweeper_loop
+from src.modules.platforms.router import router as platforms_router
 from src.modules.reports.admin_router import router as admin_report_router
 from src.modules.reports.router import router as report_router
 from src.modules.review_moderation.admin_router import router as admin_moderation_router
 from src.modules.reviews.router import router as review_router
+from src.modules.social_studio.admin_router import router as admin_social_router
 from src.modules.users.router import router as users_router
 from src.modules.wishlists.router import router as wishlists_router
 from src.services.broker.client import Broker
@@ -93,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Pixel Reviews API",
     description="API for Pixel Reviews",
-    version="0.1.0",
+    version="2.1.0",
     lifespan=lifespan,
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
@@ -115,6 +118,8 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(games_router)
+app.include_router(genres_router)
+app.include_router(platforms_router)
 app.include_router(review_router)
 app.include_router(wishlists_router)
 app.include_router(comments_router)
@@ -125,6 +130,7 @@ app.include_router(admin_comment_moderation_router)
 app.include_router(discover_router)
 app.include_router(report_router)
 app.include_router(admin_report_router)
+app.include_router(admin_social_router)
 
 
 @app.get("/health", tags=["Health"])

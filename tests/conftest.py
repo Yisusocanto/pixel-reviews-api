@@ -29,6 +29,7 @@ from src.modules.reviews.models import Review
 from src.modules.stores.models import Store
 from src.modules.users.models import User
 from src.modules.wishlists.models import Wishlist
+from src.services.gemini.dependencies import get_gemini_service
 from src.services.mailer.dependencies import get_mailer_service
 from src.services.moderation_producer.dependencies import get_producer_service
 from src.services.moderation_producer.schemas import ModerationPayload
@@ -114,6 +115,101 @@ class FakeModerationProducer:
         return True
 
 
+class FakeGeminiService:
+    default_voice = "Orus"
+    tts_model = "gemini-2.5-pro-preview-tts"
+
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+        self.tts_requests: list[tuple[str, str, str | None]] = []
+
+    async def generate_structured_json(
+        self,
+        prompt: str,
+        system_instruction: str,
+        response_schema: dict,
+        model: str | None = None,
+        temperature: float = 0.8,
+    ) -> dict:
+        self.prompts.append(prompt)
+        return {
+            "topic_label": "Crítica vs Comunidad",
+            "hook_headline": "La prensa le dio 90. Los jugadores dicen otra cosa.",
+            "hook_subheadline": "Debate real sin filtros en Pixel Reviews",
+            "voice_direction": "Tono gamer enérgico y afilado",
+            "full_narration": "La prensa especializada le puso un noventa cerrado, pero la comunidad opina distinto.",
+            "slides": [
+                {
+                    "kind": "hook",
+                    "eyebrow": "CRÍTICA VS JUGADORES",
+                    "headline": "¿Obra maestra o inflado?",
+                    "body": "Comparamos la nota oficial contra las reseñas reales.",
+                    "badge": "DEBATE",
+                    "image_url": "https://images.igdb.com/igdb/image/upload/t_1080p/sc1.webp",
+                    "cover_url": "https://images.igdb.com/igdb/image/upload/t_cover_big/co1.webp",
+                    "critic_score": 90,
+                    "community_score": 3.8,
+                    "quote_author": None,
+                },
+                {
+                    "kind": "cta",
+                    "eyebrow": "TU TURNO",
+                    "headline": "Deja tu reseña sin filtro",
+                    "body": "Entra en pixelreviews.app y vota.",
+                    "badge": "PIXEL REVIEWS",
+                    "image_url": None,
+                    "cover_url": None,
+                    "critic_score": None,
+                    "community_score": None,
+                    "quote_author": None,
+                },
+            ],
+            "video_scenes": [
+                {
+                    "headline": "La prensa le dio 90/100",
+                    "narration": "La prensa especializada le puso un noventa cerrado.",
+                    "badge": "PRENSA 90",
+                    "image_url": "https://images.igdb.com/igdb/image/upload/t_1080p/sc1.webp",
+                    "cover_url": "https://images.igdb.com/igdb/image/upload/t_cover_big/co1.webp",
+                    "critic_score": 90,
+                    "community_score": 3.8,
+                    "duration_seconds": 5.5,
+                }
+            ],
+            "captions": {
+                "tiktok": "¿Sobrevalorado o joya? #gaming #videojuegos",
+                "instagram": "Debate abierto en la comunidad #videojuegos",
+                "x_post": "Prensa 90 vs Jugadores 3.8★. ¿De qué lado estás?",
+                "youtube_shorts": "Crítica vs Jugadores #shorts #gaming",
+                "reddit_title": "¿Qué opinan realmente después de terminarlo?",
+                "reddit_body": "Viendo la diferencia entre prensa y jugadores quería saber su experiencia.",
+            },
+        }
+
+    async def generate_studio_tts(
+        self,
+        narration_text: str,
+        voice_direction: str,
+        voice_name: str | None = None,
+    ) -> tuple[bytes, float]:
+        from src.services.gemini.client import pcm_to_wav_bytes
+
+        self.tts_requests.append((narration_text, voice_direction, voice_name))
+        pcm_silence = b"\x00\x00" * 24000
+        return pcm_to_wav_bytes(pcm_silence), 1.0
+
+    async def translate_game_copy_to_spanish(
+        self,
+        title: str,
+        description: str,
+        storyline: str | None = None,
+    ) -> dict[str, str | None]:
+        return {
+            "description_es": f"[ES] {description}",
+            "storyline_es": f"[ES] {storyline}" if storyline else None,
+        }
+
+
 @pytest.fixture
 def fake_mailer() -> FakeMailerService:
     return FakeMailerService()
@@ -127,6 +223,11 @@ def fake_storage() -> FakeStorageService:
 @pytest.fixture
 def fake_moderation_producer() -> FakeModerationProducer:
     return FakeModerationProducer()
+
+
+@pytest.fixture
+def fake_gemini() -> FakeGeminiService:
+    return FakeGeminiService()
 
 
 @pytest.fixture
@@ -157,6 +258,7 @@ async def client(
     fake_mailer: FakeMailerService,
     fake_storage: FakeStorageService,
     fake_moderation_producer: FakeModerationProducer,
+    fake_gemini: FakeGeminiService,
 ) -> AsyncGenerator[AsyncClient]:
     async def override_get_session() -> AsyncGenerator[AsyncSession]:
         try:
@@ -170,6 +272,7 @@ async def client(
     app.dependency_overrides[get_mailer_service] = lambda: fake_mailer
     app.dependency_overrides[get_storage_service] = lambda: fake_storage
     app.dependency_overrides[get_producer_service] = lambda: fake_moderation_producer
+    app.dependency_overrides[get_gemini_service] = lambda: fake_gemini
     limiter.enabled = False
 
     transport = ASGITransport(app=app)

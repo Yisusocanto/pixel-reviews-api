@@ -964,7 +964,7 @@ wheels = [
 
 [[package]]
 name = "pixel-reviews-api"
-version = "1.0.0"
+version = "2.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aio-pika" },

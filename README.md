@@ -17,7 +17,13 @@ RESTful backend service for **Pixel Reviews**, an open-source video game discove
 
 ## Architecture & Engineering Highlights
 
-- **Domain-Driven Modular Structure:** Organized by domain (`auth`, `users`, `games`, `reviews`, `comments`, `likes`, `wishlists`, `review_moderation`, `developers`, `publishers`, `genres`, `platforms`, `stores`) using a strict `Router -> Service -> Repository` layered pattern and FastAPI dependency injection.
+- **Domain-Driven Modular Structure:** Organized by domain (`auth`, `users`, `games`, `reviews`, `comments`, `likes`, `wishlists`, `reports`, `review_moderation`, `comment_moderation`, `social_studio`, `discover`, `developers`, `publishers`, `genres`, `platforms`, `stores`) using a strict `Router -> Service -> Repository` layered pattern and FastAPI dependency injection.
+- **Pixel Social Studio & Gemini AI Service (`social_studio` + `services/gemini`):**
+  - Admin-only content engine (`/admin/social/candidates`, `/admin/social/generate`, `/admin/social/tts`) powered by Google Gemini with automatic resilient model fallback (`gemini-3.1-pro-preview` → `gemini-3-flash-preview`, `gemini-3.8-flash-tts` → `gemini-2.5-flash-preview-tts`).
+  - Synthesizes 24 kHz mono PCM studio voiceovers wrapped into standard RIFF WAV and archived to Cloudflare R2.
+- **Lazy Bilingual Game Translation & Programmatic Catalog Endpoints:**
+  - `GET /games/{slug}?lang=es` returns immediately and schedules a Redis-locked background task to translate English IGDB `description` and `storyline` into Spanish (`description_es`, `storyline_es`) permanently cached in PostgreSQL.
+  - Public paginated SEO endpoints under `/genres`, `/genres/{slug}/games`, `/platforms`, and `/platforms/{slug}/games`.
 - **Asynchronous Data Layer:** Built on `SQLModel` and `SQLAlchemy` async engines (`asyncpg`) with schema migrations managed via `Alembic`.
 - **Asynchronous Content Moderation & RabbitMQ:**
   - **Decoupled Publishing:** When a review with text is created or edited, it is published to a RabbitMQ quorum queue (`moderation.review.check`) with a Dead Letter Exchange (`moderation.dlx`) and delivery limit of 3.
@@ -50,6 +56,7 @@ RESTful backend service for **Pixel Reviews**, an open-source video game discove
 | **Cache & Rate Limiting** | Redis 7, SlowAPI |
 | **Authentication** | PyJWT, Bcrypt, Google OAuth2 |
 | **External Game Data** | IGDB API v4 (Twitch OAuth2) |
+| **Generative AI & TTS** | Google Gemini API (Structured JSON + Native 24 kHz TTS) |
 | **Storage & Email** | Cloudflare R2 (`boto3`), Resend |
 | **Package & Env Manager** | `uv` (Astral) |
 | **Testing & Quality** | Pytest, Pytest-Asyncio, HTTPX, Ruff |
@@ -119,6 +126,11 @@ cp .env.example .env
 | `TWITCH_CLIENT_ID` | Twitch Developer Client ID for IGDB v4 | `your_twitch_client_id` |
 | `TWITCH_CLIENT_SECRET` | Twitch Developer Client Secret for IGDB v4 | `your_twitch_client_secret` |
 | `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | `your_client_id.apps.googleusercontent.com` |
+| `GEMINI_API_KEY` | Google AI Studio API key for Social Studio & lazy ES translations | `AIza...` |
+| `GEMINI_CREATIVE_MODEL` | Primary Gemini model for social scripts/carousels (auto-falls back on 404/429) | `gemini-3.1-pro-preview` |
+| `GEMINI_TTS_MODEL` | Primary Gemini TTS model for 24 kHz studio voiceovers | `gemini-3.8-flash-tts` |
+| `GEMINI_TTS_VOICE` | Prebuilt Gemini voice (`Orus`, `Puck`, `Kore`, `Charon`, `Aoede`) | `Orus` |
+| `GEMINI_TRANSLATION_MODEL` | Gemini model used for lazy Spanish game copy translation | `gemini-3-flash-preview` |
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) | `re_...` |
 | `CF_ACCOUNT_ID` | Cloudflare account identifier for R2 storage | `your_cloudflare_account_id` |
 | `CF_BUCKET` | Cloudflare R2 bucket name | `your_r2_bucket_name` |

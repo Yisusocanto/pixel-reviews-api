@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Pixel Reviews API",
     description="API for Pixel Reviews",
-    version="0.1.0",
+    version="2.1.0",
     lifespan=lifespan,
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",

@@ -15,13 +15,24 @@ logger = logging.getLogger("gemini_service")
 RETRYABLE_STATUS_CODES = {404, 429, 503}
 
 TEXT_MODEL_FALLBACKS = (
-    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
+    "gemini-3-flash-preview",
     "gemini-flash-lite-latest",
+)
+
+TRANSLATION_MODEL_FALLBACKS = (
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
 )
 
 TTS_MODEL_FALLBACKS = (
     "gemini-3.8-flash-tts",
+    "gemini-3.8-flash-lite-tts",
     "gemini-2.5-flash-preview-tts",
     "gemini-3.1-flash-tts-preview",
 )
@@ -140,6 +151,16 @@ class GeminiService:
             last_status,
             last_body,
         )
+        if last_status == 429:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Gemini quota exceeded across all fallback models. Try again shortly or check your AI Studio billing/quota.",
+            )
+        if last_status == 504:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="Gemini timed out across all fallback models. Please try again.",
+            )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Gemini API error ({last_status})",
@@ -152,9 +173,10 @@ class GeminiService:
         response_schema: dict[str, Any],
         model: str | None = None,
         temperature: float = 0.8,
+        fallbacks: tuple[str, ...] = TEXT_MODEL_FALLBACKS,
     ) -> dict[str, Any]:
         self._ensure_configured()
-        models = _build_candidate_models(model or self.creative_model, TEXT_MODEL_FALLBACKS)
+        models = _build_candidate_models(model or self.creative_model, fallbacks)
 
         payload: dict[str, Any] = {
             "systemInstruction": {
@@ -173,7 +195,7 @@ class GeminiService:
             },
         }
 
-        body, used_model = await self._post_with_fallback(models, payload, timeout=35.0)
+        body, used_model = await self._post_with_fallback(models, payload, timeout=20.0)
         logger.info("[GEMINI] Generated structured JSON via %s", used_model)
         try:
             text_output = body["candidates"][0]["content"]["parts"][0]["text"]
@@ -270,6 +292,7 @@ class GeminiService:
             response_schema=schema,
             model=self.translation_model,
             temperature=0.25,
+            fallbacks=TRANSLATION_MODEL_FALLBACKS,
         )
         return {
             "description_es": result.get("description_es") or None,

@@ -28,10 +28,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GEMINI_API_KEY: str = ""
     GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1beta"
-    GEMINI_CREATIVE_MODEL: str = "gemini-3.1-pro-preview"
+    GEMINI_CREATIVE_MODEL: str = "gemini-3.1-flash-lite-preview"
     GEMINI_TTS_MODEL: str = "gemini-3.8-flash-tts"
     GEMINI_TTS_VOICE: str = "Orus"
-    GEMINI_TRANSLATION_MODEL: str = "gemini-3-flash-preview"
+    GEMINI_TRANSLATION_MODEL: str = "gemini-3.1-flash-lite-preview"
+    GEMINI_TRANSLATION_DAILY_LIMIT: int = 80
+    GEMINI_TRANSLATION_PER_MINUTE_LIMIT: int = 4
     RESEND_API_KEY: str = ""
     RESEND_DOMAIN: str = "onboarding@resend.dev"
 
